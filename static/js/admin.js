@@ -7,24 +7,87 @@ let activeFolderId = "default";
 let cachedFolders = [];
 
 // Check / Prompt Admin PIN
-function checkAdminAuth() {
+function showAdminAuthModal(errorMsg = "") {
     const modal = document.getElementById("modal-admin-auth");
-    if (adminPin) {
-        modal.classList.add("hidden");
-        loadFolders();
-        loadQuestions();
-        refreshAdminPlayers();
-    } else {
-        modal.classList.remove("hidden");
+    if (!modal) return;
+    modal.style.display = "flex";
+    modal.classList.remove("hidden");
+    const errorEl = document.getElementById("admin-auth-error");
+    if (errorEl) {
+        if (errorMsg) {
+            errorEl.innerText = errorMsg;
+            errorEl.classList.remove("hidden");
+        } else {
+            errorEl.classList.add("hidden");
+        }
+    }
+    const input = document.getElementById("input-admin-pin");
+    if (input) {
+        input.value = "";
+        setTimeout(() => input.focus(), 100);
+    }
+}
+
+function hideAdminAuthModal() {
+    const modal = document.getElementById("modal-admin-auth");
+    if (!modal) return;
+    modal.style.display = "none";
+    modal.classList.add("hidden");
+    const errorEl = document.getElementById("admin-auth-error");
+    if (errorEl) errorEl.classList.add("hidden");
+}
+
+async function checkAdminAuth() {
+    if (!adminPin) {
+        showAdminAuthModal();
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/admin/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ admin_pin: adminPin })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            hideAdminAuthModal();
+            try { loadFolders(); } catch(e) {}
+            try { loadQuestions(); } catch(e) {}
+            try { refreshAdminPlayers(); } catch(e) {}
+        } else {
+            sessionStorage.removeItem("aura_admin_pin");
+            adminPin = "";
+            showAdminAuthModal("Oturum süresi doldu veya Admin PIN güncellendi. Lütfen giriş yapınız.");
+        }
+    } catch(err) {
+        hideAdminAuthModal();
+        try { loadFolders(); } catch(e) {}
+        try { loadQuestions(); } catch(e) {}
+        try { refreshAdminPlayers(); } catch(e) {}
     }
 }
 
 async function handleAdminAuth(e) {
-    e.preventDefault();
-    const pin = document.getElementById("input-admin-pin").value.trim();
+    if (e && e.preventDefault) e.preventDefault();
+    const pinInput = document.getElementById("input-admin-pin");
+    const pin = pinInput ? pinInput.value.trim() : "";
     const btn = document.getElementById("btn-admin-login");
-    btn.disabled = true;
-    btn.innerText = "Doğrulanıyor...";
+    const errorEl = document.getElementById("admin-auth-error");
+
+    if (!pin) {
+        if (errorEl) {
+            errorEl.innerText = "Lütfen Admin PIN kodunuzu giriniz.";
+            errorEl.classList.remove("hidden");
+        }
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Doğrulanıyor...";
+    }
+    if (errorEl) errorEl.classList.add("hidden");
 
     try {
         const res = await fetch("/api/admin/verify", {
@@ -36,27 +99,51 @@ async function handleAdminAuth(e) {
         if (res.ok && data.success) {
             adminPin = pin;
             sessionStorage.setItem("aura_admin_pin", adminPin);
-            document.getElementById("modal-admin-auth").classList.add("hidden");
-            window.soundManager.playCorrect();
-            loadFolders();
-            loadQuestions();
-            refreshAdminPlayers();
+            hideAdminAuthModal();
+
+            try {
+                if (window.soundManager && typeof window.soundManager.playCorrect === "function") {
+                    window.soundManager.playCorrect();
+                }
+            } catch(se) {}
+
+            try { loadFolders(); } catch(fe) { console.error(fe); }
+            try { loadQuestions(); } catch(qe) { console.error(qe); }
+            try { refreshAdminPlayers(); } catch(pe) { console.error(pe); }
         } else {
-            alert(data.detail || "Hatalı Admin PIN!");
+            const msg = data.detail || "Hatalı Admin PIN kodu!";
+            if (errorEl) {
+                errorEl.innerText = msg;
+                errorEl.classList.remove("hidden");
+            } else {
+                alert(msg);
+            }
         }
     } catch(err) {
-        alert("Bağlantı hatası!");
+        const msg = "Sunucuya bağlanırken bağlantı hatası oluştu.";
+        if (errorEl) {
+            errorEl.innerText = msg;
+            errorEl.classList.remove("hidden");
+        } else {
+            alert(msg);
+        }
     } finally {
-        btn.disabled = false;
-        btn.innerText = "Giriş Yap";
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Giriş Yap";
+        }
     }
 }
 
 function adminLogout() {
     sessionStorage.removeItem("aura_admin_pin");
     adminPin = "";
-    document.getElementById("modal-admin-auth").classList.remove("hidden");
-    window.soundManager.playClick();
+    showAdminAuthModal();
+    try {
+        if (window.soundManager && typeof window.soundManager.playClick === "function") {
+            window.soundManager.playClick();
+        }
+    } catch(e) {}
 }
 
 // Tab Switching

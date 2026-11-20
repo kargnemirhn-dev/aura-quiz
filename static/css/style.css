@@ -257,3 +257,8 @@ body {
 .crown-anim {
     animation: crownBounce 1.5s ease-in-out infinite;
 }
+
+/* Bulletproof Hidden Utility to guarantee display: none across all elements */
+.hidden {
+    display: none !important;
+}

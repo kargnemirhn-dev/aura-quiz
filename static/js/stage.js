@@ -11,18 +11,34 @@ function checkStageAuth() {
     if (!modal) return;
     const isAuthed = sessionStorage.getItem("aura_stage_auth") === "true";
     if (isAuthed) {
+        modal.style.display = "none";
         modal.classList.add("hidden");
     } else {
+        modal.style.display = "flex";
         modal.classList.remove("hidden");
     }
 }
 
 async function handleStageAuth(e) {
-    e.preventDefault();
-    const pin = document.getElementById("input-stage-pin").value.trim();
+    if (e && e.preventDefault) e.preventDefault();
+    const pinInput = document.getElementById("input-stage-pin");
+    const pin = pinInput ? pinInput.value.trim() : "";
     const btn = document.getElementById("btn-stage-auth-submit");
-    btn.disabled = true;
-    btn.innerText = "Doğrulanıyor...";
+    const errorEl = document.getElementById("stage-auth-error");
+
+    if (!pin) {
+        if (errorEl) {
+            errorEl.innerText = "Lütfen Sahne PIN kodunu giriniz.";
+            errorEl.classList.remove("hidden");
+        }
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Doğrulanıyor...";
+    }
+    if (errorEl) errorEl.classList.add("hidden");
 
     try {
         const res = await fetch("/api/stage/verify", {
@@ -33,23 +49,58 @@ async function handleStageAuth(e) {
         const data = await res.json();
         if (res.ok && data.success) {
             sessionStorage.setItem("aura_stage_auth", "true");
-            document.getElementById("modal-stage-auth").classList.add("hidden");
-            window.soundManager.playCorrect();
+            const modal = document.getElementById("modal-stage-auth");
+            if (modal) {
+                modal.style.display = "none";
+                modal.classList.add("hidden");
+            }
+            try {
+                if (window.soundManager && typeof window.soundManager.playCorrect === "function") {
+                    window.soundManager.playCorrect();
+                }
+            } catch(se) {}
         } else {
-            alert(data.detail || "Hatalı Sahne PIN!");
+            const msg = data.detail || "Hatalı Sahne PIN kodu!";
+            if (errorEl) {
+                errorEl.innerText = msg;
+                errorEl.classList.remove("hidden");
+            } else {
+                alert(msg);
+            }
         }
     } catch(err) {
-        alert("Bağlantı hatası!");
+        const msg = "Bağlantı hatası oluştu.";
+        if (errorEl) {
+            errorEl.innerText = msg;
+            errorEl.classList.remove("hidden");
+        } else {
+            alert(msg);
+        }
     } finally {
-        btn.disabled = false;
-        btn.innerText = "Sahneyi Aç ve Başlat 📺";
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Sahneyi Aç ve Başlat 📺";
+        }
     }
 }
 
 function lockStage() {
     sessionStorage.removeItem("aura_stage_auth");
-    document.getElementById("modal-stage-auth").classList.remove("hidden");
-    window.soundManager.playClick();
+    const modal = document.getElementById("modal-stage-auth");
+    if (modal) {
+        modal.style.display = "flex";
+        modal.classList.remove("hidden");
+        const pinInput = document.getElementById("input-stage-pin");
+        if (pinInput) {
+            pinInput.value = "";
+            setTimeout(() => pinInput.focus(), 100);
+        }
+    }
+    try {
+        if (window.soundManager && typeof window.soundManager.playClick === "function") {
+            window.soundManager.playClick();
+        }
+    } catch(e) {}
 }
 
 // Initialize QR codes

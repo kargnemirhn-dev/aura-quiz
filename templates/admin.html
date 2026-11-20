@@ -31,7 +31,7 @@
                 <span id="admin-pin-display" class="font-mono text-base font-black text-white tracking-widest">{{ room_pin }}</span>
             </div>
 
-            <!-- "Admin PIN Değiştir" Butonu (Varsayılan 220126) -->
+            <!-- "Admin PIN Değiştir" Butonu -->
             <button onclick="openChangePinModal()" class="flex items-center space-x-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm" title="Admin PIN Değiştir">
                 <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
                 <span class="hidden sm:inline">Admin PIN Değiştir</span>
@@ -375,16 +375,19 @@
             <p class="text-xs text-slate-400 mb-6">Yönetici PIN kodunuzu giriniz.</p>
 
             <form onsubmit="handleAdminAuth(event)" class="space-y-4">
-                <input type="password" id="input-admin-pin" required placeholder="Varsayılan: 220126" autofocus
+                <input type="password" id="input-admin-pin" required placeholder="Admin PIN Kodunuz" autofocus
                     class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-3 text-center text-2xl font-mono font-black text-white outline-none">
-                <button type="submit" id="btn-admin-login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30">
+                
+                <p id="admin-auth-error" class="hidden text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl"></p>
+
+                <button type="submit" id="btn-admin-login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 active:scale-95">
                     Giriş Yap
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL 2: CHANGE ADMIN PIN (Default 220126) -->
+    <!-- MODAL 2: CHANGE ADMIN PIN -->
     <div id="modal-change-admin-pin" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 hidden">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative">
             <button onclick="closeChangePinModal()" class="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">

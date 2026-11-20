@@ -32,7 +32,9 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # --- Helper: Verify Admin PIN ---
 def verify_admin_pin(admin_pin: str) -> bool:
-    if not admin_pin or admin_pin != settings.ADMIN_PIN:
+    clean_input = str(admin_pin or "").strip()
+    clean_expected = str(settings.ADMIN_PIN or "").strip()
+    if not clean_input or clean_input != clean_expected:
         raise HTTPException(status_code=403, detail="Geçersiz Admin PIN kodu")
     return True
 
@@ -124,8 +126,10 @@ async def events_stream(request: Request):
 # --- Public API Routes ---
 @router.post("/api/stage/verify")
 async def stage_verify(payload: StageAuthRequest):
-    pin = payload.stage_pin.strip()
-    if pin == settings.STAGE_PIN or pin == settings.ADMIN_PIN:
+    pin = str(payload.stage_pin or "").strip()
+    expected_stage = str(settings.STAGE_PIN or "").strip()
+    expected_admin = str(settings.ADMIN_PIN or "").strip()
+    if pin and (pin == expected_stage or pin == expected_admin):
         return {"success": True, "message": "Sahne yetkilendirmesi başarılı"}
     raise HTTPException(status_code=403, detail="Hatalı Sahne PIN kodu!")
 
@@ -207,19 +211,23 @@ async def get_player_rank(player_id: str):
 
 # --- Admin API Routes ---
 @router.post("/api/admin/verify")
-async def admin_verify(payload: Dict[str, str]):
-    pin = payload.get("admin_pin", "")
-    if pin == settings.ADMIN_PIN:
+async def admin_verify(payload: Dict[str, Any]):
+    pin = str(payload.get("admin_pin", "")).strip()
+    expected = str(settings.ADMIN_PIN or "").strip()
+    if pin and pin == expected:
         return {"success": True, "message": "Yetkilendirme başarılı"}
     raise HTTPException(status_code=403, detail="Hatalı Admin PIN!")
 
 @router.post("/api/admin/change-pin")
 async def admin_change_pin(payload: AdminPinChangeRequest):
-    if payload.current_pin.strip() != settings.ADMIN_PIN:
+    current = str(payload.current_pin or "").strip()
+    expected = str(settings.ADMIN_PIN or "").strip()
+    if current != expected:
         raise HTTPException(status_code=403, detail="Mevcut Admin PIN hatalı!")
-    if len(payload.new_pin.strip()) < 4:
+    new_pin = str(payload.new_pin or "").strip()
+    if len(new_pin) < 4:
         raise HTTPException(status_code=400, detail="Yeni PIN en az 4 karakter olmalıdır!")
-    settings.set_admin_pin(payload.new_pin.strip())
+    settings.set_admin_pin(new_pin)
     return {"success": True, "message": "Admin PIN başarıyla güncellendi!"}
 
 @router.post("/api/admin/random-pin")

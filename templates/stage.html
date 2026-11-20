@@ -359,8 +359,9 @@
             </p>
 
             <form onsubmit="handleStageAuth(event)" class="space-y-4">
-                <input type="password" id="input-stage-pin" required placeholder="PIN Kodu (Örn: 220126)" autofocus
+                <input type="password" id="input-stage-pin" required placeholder="Sahne PIN Kodunuz" autofocus
                     class="w-full bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-2xl px-4 py-3.5 text-center text-3xl font-mono font-black text-white tracking-widest outline-none transition-all">
+                <p id="stage-auth-error" class="hidden text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl"></p>
                 <button type="submit" id="btn-stage-auth-submit" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black py-4 rounded-xl text-sm shadow-xl shadow-purple-600/30 transition-all active:scale-[0.98]">
                     Sahneyi Aç ve Başlat 📺
                 </button>

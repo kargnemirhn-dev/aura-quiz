@@ -405,11 +405,11 @@ class GameManager:
         auto_mode: Optional[bool] = None
     ):
         async with self._lock:
-            if question_duration is not None and question_duration in (5, 10, 15, 20, 30):
+            if question_duration is not None and 3 <= question_duration <= 120:
                 self.duration = question_duration
                 if self.status == "QUESTION":
                     self.timer_remaining = min(self.timer_remaining, self.duration)
-            if transition_delay is not None and transition_delay in (3, 5, 10, 15):
+            if transition_delay is not None and 1 <= transition_delay <= 60:
                 self.transition_delay = transition_delay
                 self.leaderboard_countdown = self.transition_delay
             if auto_mode is not None:
