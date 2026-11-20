@@ -12,6 +12,7 @@ function showAdminAuthModal(errorMsg = "") {
     if (!modal) return;
     modal.style.display = "flex";
     modal.classList.remove("hidden");
+    modal.classList.add("flex");
     const errorEl = document.getElementById("admin-auth-error");
     if (errorEl) {
         if (errorMsg) {
@@ -33,6 +34,7 @@ function hideAdminAuthModal() {
     if (!modal) return;
     modal.style.display = "none";
     modal.classList.add("hidden");
+    modal.classList.remove("flex");
     const errorEl = document.getElementById("admin-auth-error");
     if (errorEl) errorEl.classList.add("hidden");
 }
@@ -837,8 +839,6 @@ function getCorrectBadgeClass(opt) {
     if (opt === "D") return "bg-green-500/20 text-green-400 border border-green-500/30";
     return "bg-slate-800 text-slate-300";
 }
-    return "bg-slate-800 text-slate-300";
-}
 
 // Export Results Handler (Requirement 3: Excel & PDF)
 function exportResults(format) {
@@ -1030,6 +1030,21 @@ function applyState(state) {
     }
 }
 
+let firestoreUnsubscribe = null;
+function listenToFirestore(roomPin) {
+    if (!window.firestoreDb || !roomPin) return;
+    if (firestoreUnsubscribe) {
+        try { firestoreUnsubscribe(); } catch(e) {}
+    }
+    try {
+        firestoreUnsubscribe = window.firestoreDb.collection("rooms").doc(roomPin).onSnapshot((doc) => {
+            if (doc.exists) {
+                applyState(doc.data());
+            }
+        });
+    } catch(e) {}
+}
+
 // Init
 function initAdmin() {
     checkAdminAuth();
@@ -1046,7 +1061,10 @@ function initAdmin() {
     // Initial state fetch
     fetch("/api/state")
         .then(res => res.json())
-        .then(state => applyState(state))
+        .then(state => {
+            applyState(state);
+            if (state && state.room_pin) listenToFirestore(state.room_pin);
+        })
         .catch(() => {});
 }
 

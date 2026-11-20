@@ -170,6 +170,45 @@ def run_comprehensive_qa_test():
         print("  ✓ Admin PIN başarıyla değiştirildi, yeni PIN doğrulandı ve geri yüklendi.")
 
         # ---------------------------------------------------------------------
+        # TEST D: Node.js JavaScript Syntax Doğrulama Testi
+        # ---------------------------------------------------------------------
+        print("\n[TEST D] Node.js JavaScript Syntax Doğrulama Testi...")
+        import shutil, subprocess
+        node_bin = shutil.which("node")
+        if node_bin:
+            for js_f in (ROOT_DIR / "static" / "js").glob("*.js"):
+                res = subprocess.run([node_bin, "--check", str(js_f)], capture_output=True, text=True)
+                assert res.returncode == 0, f"JS Syntax error in {js_f}:\n{res.stderr}"
+            print("  ✓ Tüm frontend JS dosyaları (admin.js, stage.js, play.js, audio.js) sıfır syntax hatasıyla doğrulandı.")
+        else:
+            print("  ℹ Node.js bulunamadı, syntax testi atlandı.")
+
+        # ---------------------------------------------------------------------
+        # TEST E: Form Submit & Modal Reload Önleme Testi
+        # ---------------------------------------------------------------------
+        print("\n[TEST E] Form Submit & Modal Reload Önleme Testi...")
+        admin_page_html = (ROOT_DIR / "templates" / "admin.html").read_text(encoding="utf-8")
+        stage_page_html = (ROOT_DIR / "templates" / "stage.html").read_text(encoding="utf-8")
+        assert 'id="btn-admin-login"' in admin_page_html and 'type="button"' in admin_page_html, "Admin login button must be type='button'"
+        assert 'id="btn-stage-auth-submit"' in stage_page_html and 'type="button"' in stage_page_html, "Stage login button must be type='button'"
+        assert 'onsubmit="event.preventDefault(); handleAdminAuth(event); return false;"' in admin_page_html
+        assert 'onsubmit="event.preventDefault(); handleStageAuth(event); return false;"' in stage_page_html
+        print("  ✓ Admin ve Sahne giriş formları sayfa yenileme/çökme tuzağına karşı tamamen korundu.")
+
+        # ---------------------------------------------------------------------
+        # TEST F: Vercel Serverless Timestamp Tabanlı Timer Doğrulama Testi
+        # ---------------------------------------------------------------------
+        print("\n[TEST F] Vercel Serverless Timestamp Tabanlı Timer Doğrulama Testi...")
+        game_manager.status = "QUESTION"
+        game_manager.duration = 20
+        game_manager.question_start_timestamp = time.time() - 5.0 # 5 seconds elapsed
+        state_dyn = game_manager.get_public_state()
+        assert 14 <= state_dyn["timer_remaining"] <= 15, f"Dynamic timer calculation error: {state_dyn['timer_remaining']}"
+        assert state_dyn["question_start_timestamp"] > 0
+        game_manager.status = "LOBBY"
+        print("  ✓ Serverless Firestore timestamp tabanlı timer hesaplaması doğrulandı.")
+
+        # ---------------------------------------------------------------------
         # 1. ADMIN PANELİ: SIKIŞMAYAN BUTONLAR VE DÜZENLİ NAVİGASYON (Görsel 1)
         # ---------------------------------------------------------------------
         print("\n[GEREKSİNİM 1] Admin Paneli - Sıkışmayan Butonlar ve Düzenli Tablar Testi...")

@@ -30,6 +30,7 @@ class GameManager:
         self.transition_delay: int = 5 # Auto leaderboard duration: 3, 5, 10s
         self.timer_remaining: int = 15
         self.leaderboard_countdown: int = 5
+        self.leaderboard_start_timestamp: float = 0
         self.last_reaction: Optional[Dict] = None
         self.question_start_timestamp: float = 0
         self._timer_task: Optional[asyncio.Task] = None
@@ -74,6 +75,17 @@ class GameManager:
         # Calculate answers count for current question
         answers_count = sum(self.answer_stats.values())
 
+        # Dynamically calculate remaining timer from timestamp for serverless environments
+        dynamic_timer = self.timer_remaining
+        if self.status == "QUESTION" and self.question_start_timestamp > 0:
+            elapsed = time.time() - self.question_start_timestamp
+            dynamic_timer = max(0, int(self.duration - elapsed))
+
+        dynamic_lb_countdown = self.leaderboard_countdown
+        if self.status == "LEADERBOARD" and self.leaderboard_start_timestamp > 0:
+            elapsed_lb = time.time() - self.leaderboard_start_timestamp
+            dynamic_lb_countdown = max(0, int(self.transition_delay - elapsed_lb))
+
         return {
             "room_pin": self.room_pin,
             "status": self.status,
@@ -83,9 +95,10 @@ class GameManager:
             "duration": self.duration,
             "question_duration": self.duration,
             "transition_delay": self.transition_delay,
-            "timer_remaining": self.timer_remaining,
-            "leaderboard_countdown": self.leaderboard_countdown,
+            "timer_remaining": dynamic_timer,
+            "leaderboard_countdown": dynamic_lb_countdown,
             "question_start_timestamp": self.question_start_timestamp,
+            "leaderboard_start_timestamp": self.leaderboard_start_timestamp,
             "current_question": q_dict,
             "participants_count": len(self.players),
             "answers_count": answers_count,
@@ -378,7 +391,8 @@ class GameManager:
         async with self._lock:
             self._cancel_timer()
             self.status = "LEADERBOARD"
-            self.leaderboard_countdown = 5
+            self.leaderboard_countdown = self.transition_delay
+            self.leaderboard_start_timestamp = time.time()
             await self.broadcast_state()
             if self.auto_mode:
                 self._schedule_leaderboard_countdown()
@@ -394,6 +408,8 @@ class GameManager:
             self._cancel_timer()
             self.status = "LOBBY"
             self.current_question_index = 0
+            self.question_start_timestamp = 0
+            self.leaderboard_start_timestamp = 0
             self.players.clear()
             self._reset_answers()
             await self.broadcast_state()

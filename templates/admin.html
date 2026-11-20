@@ -374,13 +374,14 @@
             <h3 class="text-xl font-black text-white mb-1">Admin Girişi</h3>
             <p class="text-xs text-slate-400 mb-6">Yönetici PIN kodunuzu giriniz.</p>
 
-            <form onsubmit="handleAdminAuth(event)" class="space-y-4">
+            <form id="form-admin-login" onsubmit="event.preventDefault(); handleAdminAuth(event); return false;" class="space-y-4">
                 <input type="password" id="input-admin-pin" required placeholder="Admin PIN Kodunuz" autofocus
+                    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); handleAdminAuth(event); }"
                     class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-3 text-center text-2xl font-mono font-black text-white outline-none">
                 
                 <p id="admin-auth-error" class="hidden text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl"></p>
 
-                <button type="submit" id="btn-admin-login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 active:scale-95">
+                <button type="button" onclick="handleAdminAuth(event)" id="btn-admin-login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 active:scale-95">
                     Giriş Yap
                 </button>
             </form>
@@ -400,7 +401,7 @@
             <h3 class="text-xl font-black text-white mb-1">Admin PIN Değiştir</h3>
             <p class="text-xs text-slate-400 mb-6">Yönetici giriş şifrenizi güncelleyin.</p>
 
-            <form onsubmit="handleChangeAdminPin(event)" class="space-y-3.5 text-left">
+            <form onsubmit="event.preventDefault(); handleChangeAdminPin(event); return false;" class="space-y-3.5 text-left">
                 <div>
                     <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mevcut Admin PIN</label>
                     <input type="password" id="input-current-admin-pin" required placeholder="Mevcut PIN"
@@ -417,7 +418,7 @@
                         class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-center font-mono font-black text-white outline-none">
                 </div>
 
-                <button type="submit" id="btn-save-admin-pin" class="mt-2 w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/30 active:scale-95">
+                <button type="button" onclick="handleChangeAdminPin(event)" id="btn-save-admin-pin" class="mt-2 w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/30 active:scale-95">
                     Yeni Şifreyi Kaydet
                 </button>
             </form>

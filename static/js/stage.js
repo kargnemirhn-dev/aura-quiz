@@ -1,3 +1,55 @@
+let stageTimerInterval = null;
+let stageLeaderboardInterval = null;
+
+function startStageQuestionCountdown(startTimestamp, duration) {
+    if (stageTimerInterval) clearInterval(stageTimerInterval);
+    const updateCountdown = () => {
+        const timerEl = document.getElementById("q-timer");
+        const timerBox = document.getElementById("q-timer-box");
+        if (!timerEl) return;
+        const now = Date.now() / 1000;
+        const elapsed = startTimestamp > 0 ? (now - startTimestamp) : 0;
+        const remaining = Math.max(0, Math.ceil(duration - elapsed));
+        timerEl.innerText = remaining;
+        if (remaining <= 5) {
+            if (timerBox) {
+                timerBox.classList.add("pulse-urgent", "border-red-500");
+                timerBox.classList.remove("border-indigo-500");
+            }
+            if (remaining > 0) window.soundManager.playTick();
+        } else {
+            if (timerBox) {
+                timerBox.classList.remove("pulse-urgent", "border-red-500");
+                timerBox.classList.add("border-indigo-500");
+            }
+        }
+        if (remaining <= 0) {
+            clearInterval(stageTimerInterval);
+            stageTimerInterval = null;
+        }
+    };
+    updateCountdown();
+    stageTimerInterval = setInterval(updateCountdown, 250);
+}
+
+function startStageLeaderboardCountdown(startTimestamp, delay) {
+    if (stageLeaderboardInterval) clearInterval(stageLeaderboardInterval);
+    const updateLbCountdown = () => {
+        const countdownEl = document.getElementById("lb-countdown-num");
+        if (!countdownEl) return;
+        const now = Date.now() / 1000;
+        const elapsed = startTimestamp > 0 ? (now - startTimestamp) : 0;
+        const remaining = Math.max(0, Math.ceil(delay - elapsed));
+        countdownEl.innerText = remaining;
+        if (remaining <= 0) {
+            clearInterval(stageLeaderboardInterval);
+            stageLeaderboardInterval = null;
+        }
+    };
+    updateLbCountdown();
+    stageLeaderboardInterval = setInterval(updateLbCountdown, 250);
+}
+
 // Stage Screen Controller
 let currentRoomPin = document.getElementById("stage-pin-display").innerText.trim();
 let lastStatus = "LOBBY";
@@ -13,9 +65,13 @@ function checkStageAuth() {
     if (isAuthed) {
         modal.style.display = "none";
         modal.classList.add("hidden");
+        modal.classList.remove("flex");
     } else {
         modal.style.display = "flex";
         modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        const pinInput = document.getElementById("input-stage-pin");
+        if (pinInput) setTimeout(() => pinInput.focus(), 100);
     }
 }
 
@@ -53,6 +109,7 @@ async function handleStageAuth(e) {
             if (modal) {
                 modal.style.display = "none";
                 modal.classList.add("hidden");
+                modal.classList.remove("flex");
             }
             try {
                 if (window.soundManager && typeof window.soundManager.playCorrect === "function") {
@@ -90,6 +147,7 @@ function lockStage() {
     if (modal) {
         modal.style.display = "flex";
         modal.classList.remove("hidden");
+        modal.classList.add("flex");
         const pinInput = document.getElementById("input-stage-pin");
         if (pinInput) {
             pinInput.value = "";
@@ -271,6 +329,15 @@ function applyState(state) {
         }
     });
 
+    if (newStatus !== "QUESTION" && stageTimerInterval) {
+        clearInterval(stageTimerInterval);
+        stageTimerInterval = null;
+    }
+    if (newStatus !== "LEADERBOARD" && stageLeaderboardInterval) {
+        clearInterval(stageLeaderboardInterval);
+        stageLeaderboardInterval = null;
+    }
+
     if (newStatus === "LOBBY") {
         fetch("/api/leaderboard?limit=50")
             .then(res => res.json())
@@ -291,19 +358,11 @@ function applyState(state) {
             const optC = document.getElementById("stage-opt-C");
             optC.className = "bg-yellow-500 rounded-3xl p-6 sm:p-8 flex items-center space-x-6 text-slate-950 shadow-xl transition-all";
 
-            document.getElementById("q-timer").innerText = state.timer_remaining;
             document.getElementById("q-answers-count").innerText = state.answers_count || 0;
             document.getElementById("q-total-players").innerText = state.participants_count || 0;
 
-            const timerBox = document.getElementById("q-timer-box");
-            if (state.timer_remaining <= 5) {
-                timerBox.classList.add("pulse-urgent", "border-red-500");
-                timerBox.classList.remove("border-indigo-500");
-                window.soundManager.playTick();
-            } else {
-                timerBox.classList.remove("pulse-urgent", "border-red-500");
-                timerBox.classList.add("border-indigo-500");
-            }
+            // Start smooth timestamp-based countdown
+            startStageQuestionCountdown(state.question_start_timestamp, state.duration || 15);
         }
     } else if (newStatus === "REVEAL") {
         if (lastStatus !== "REVEAL") {
@@ -340,7 +399,7 @@ function applyState(state) {
         const autoCountdownEl = document.getElementById("leaderboard-auto-countdown");
         if (state.auto_mode) {
             autoCountdownEl.classList.remove("hidden");
-            document.getElementById("lb-countdown-num").innerText = state.leaderboard_countdown || 5;
+            startStageLeaderboardCountdown(state.leaderboard_start_timestamp, state.transition_delay || 5);
         } else {
             autoCountdownEl.classList.add("hidden");
         }
