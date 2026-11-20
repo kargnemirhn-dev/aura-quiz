@@ -30,15 +30,26 @@ let currentRoomPin = "";
 let currentQuestionId = null;
 let hasAnsweredCurrentQuestion = false;
 
-// Name input real-time validation (Requirement 10: Sadece Harf Kuralı)
+// Name input real-time validation (Requirement 3: Ad + Soyad en az 2 kelime ve Sadece Harf)
 function validateNameInput(input) {
     const warningEl = document.getElementById("name-validation-warning");
-    const val = input.value;
+    const val = input.value.trim();
+    const rawVal = input.value;
     const turkishLettersRegex = /^[a-zA-ZçÇğĞıİöÖşŞüÜ\s]*$/;
 
-    if (!turkishLettersRegex.test(val)) {
+    if (!turkishLettersRegex.test(rawVal)) {
         if (warningEl) {
             warningEl.innerText = "İsimde sadece harf kullanılabilir (Rakam ve özel karakter kabul edilmez).";
+            warningEl.classList.remove("hidden");
+        }
+        input.classList.add("border-amber-500");
+        return;
+    }
+
+    const words = val.split(/\s+/).filter(w => w.length > 0);
+    if (words.length < 2 && val.length > 3) {
+        if (warningEl) {
+            warningEl.innerText = "Lütfen Ad ve Soyadınızı birlikte giriniz (En az 2 kelime).";
             warningEl.classList.remove("hidden");
         }
         input.classList.add("border-amber-500");
@@ -396,6 +407,39 @@ function applyState(state) {
 
     } else if (newStatus === "PODIUM") {
         document.getElementById("final-score").innerText = `${currentPlayer.score || 0} Puan`;
+        
+        // Fetch and display player's individual ranking (Requirement 2)
+        if (currentPlayer && currentPlayer.id) {
+            fetch(`/api/player/rank/${encodeURIComponent(currentPlayer.id)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const rankEl = document.getElementById("player-final-rank");
+                    const iconEl = document.getElementById("player-final-rank-icon");
+                    if (rankEl && data.rank) {
+                        let rankText = "";
+                        let icon = "🏆";
+                        if (data.rank === 1) {
+                            rankText = "1. Şampiyonsun! 🥇";
+                            icon = "👑";
+                        } else if (data.rank === 2) {
+                            rankText = "2. Sıradasın! 🥈";
+                            icon = "🥈";
+                        } else if (data.rank === 3) {
+                            rankText = "3. Sıradasın! 🥉";
+                            icon = "🥉";
+                        } else {
+                            rankText = `${data.rank}. Sıradasın! 🏆`;
+                            icon = "🎖️";
+                        }
+                        if (data.total_players) {
+                            rankText += ` (Toplam ${data.total_players} Katılımcı)`;
+                        }
+                        rankEl.innerText = rankText;
+                        if (iconEl) iconEl.innerText = icon;
+                    }
+                })
+                .catch(() => {});
+        }
     }
 }
 

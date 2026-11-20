@@ -17,7 +17,9 @@ from aura.models import (
     EmojiReaction,
     UnbanRequest,
     Question,
-    QuestionOption
+    QuestionOption,
+    PlayerScoreAdjustRequest,
+    QuizFolderCreate
 )
 from aura.game_manager import game_manager
 from aura.gemini_service import gemini_service
@@ -196,6 +198,13 @@ async def player_answer(payload: AnswerSubmission):
         raise HTTPException(status_code=400, detail=result.get("error", "Hata oluştu"))
     return result
 
+@router.get("/api/player/rank/{player_id}")
+async def get_player_rank(player_id: str):
+    rank_info = game_manager.get_player_rank(player_id)
+    if not rank_info:
+        raise HTTPException(status_code=404, detail="Oyuncu bulunamadı")
+    return rank_info
+
 # --- Admin API Routes ---
 @router.post("/api/admin/verify")
 async def admin_verify(payload: Dict[str, str]):
@@ -269,6 +278,48 @@ async def export_pdf(admin_pin: str = ""):
         headers={"Content-Disposition": "attachment; filename=AI_ERA_Zirvesi_Sonuc_Raporu.pdf"}
     )
 
+# --- Oyuncu Puan Yönetimi (+ ve - Butonları) (Requirement 7) ---
+@router.post("/api/admin/players/score")
+async def admin_adjust_player_score(payload: PlayerScoreAdjustRequest):
+    verify_admin_pin(payload.admin_pin)
+    delta = payload.get_delta()
+    player = await game_manager.adjust_player_score(payload.player_id, delta)
+    if not player:
+        raise HTTPException(status_code=404, detail="Oyuncu bulunamadı")
+    return {"success": True, "new_score": player.score, "player": player.model_dump()}
+
+# --- Quiz Klasörleri Yönetimi (Requirement 8) ---
+@router.get("/api/admin/folders")
+async def admin_get_folders(admin_pin: str = ""):
+    verify_admin_pin(admin_pin)
+    return {
+        "folders": game_manager.get_folders_list(),
+        "active_folder_id": game_manager.active_folder_id
+    }
+
+@router.post("/api/admin/folders")
+async def admin_create_folder(payload: QuizFolderCreate):
+    verify_admin_pin(payload.admin_pin)
+    title = payload.get_title()
+    folder = await game_manager.create_folder(title, payload.description or "")
+    return {"success": True, "folder": folder.model_dump()}
+
+@router.delete("/api/admin/folders/{folder_id}")
+async def admin_delete_folder(folder_id: str, admin_pin: str = ""):
+    verify_admin_pin(admin_pin)
+    deleted = await game_manager.delete_folder(folder_id)
+    if not deleted:
+        raise HTTPException(status_code=400, detail="Varsayılan klasör silinemez veya klasör bulunamadı")
+    return {"success": True}
+
+@router.post("/api/admin/folders/{folder_id}/activate")
+async def admin_activate_folder(folder_id: str, payload: Dict[str, str]):
+    verify_admin_pin(payload.get("admin_pin", ""))
+    activated = await game_manager.activate_folder(folder_id)
+    if not activated:
+        raise HTTPException(status_code=404, detail="Klasör bulunamadı")
+    return {"success": True, "active_folder_id": folder_id}
+
 # --- Quizlerim (Manuel Soru Yönetimi) ---
 @router.post("/api/admin/questions/manual")
 async def add_manual_question(payload: ManualQuestionCreate):
@@ -279,9 +330,14 @@ async def add_manual_question(payload: ManualQuestionCreate):
         options=payload.options,
         correct=payload.correct,
         explanation=payload.explanation.strip(),
-        duration=payload.duration
+        duration=payload.duration,
+        difficulty=payload.difficulty or "Orta",
+        folder_id=payload.folder_id or game_manager.active_folder_id
     )
-    added = await game_manager.add_manual_question(new_q)
+    try:
+        added = await game_manager.add_manual_question(new_q)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {"success": True, "question": added.model_dump(), "total": len(game_manager.questions)}
 
 @router.delete("/api/admin/questions/{q_id}")
@@ -305,16 +361,47 @@ async def unban_user(payload: UnbanRequest):
     res = security_service.unban_user(target_id)
     return {"success": res, "message": f"{target_id} kullanıcısının banı kaldırıldı"}
 
+# --- Yapay Zeka Soru Üretici (Sınırlar: Tek seferde maks 50, toplam maks 60) (Requirement 9) ---
 @router.post("/api/admin/generate-questions")
 async def admin_generate_questions(payload: Dict[str, Any]):
-    admin_pin = payload.get("admin_pin", "")
-    verify_admin_pin(admin_pin)
+    verify_admin_pin(payload.get("admin_pin", ""))
     count = int(payload.get("count", 30))
-    questions = await gemini_service.generate_questions_with_gemini(count=count)
-    await game_manager.set_questions(questions)
+
+    # Single generation limit: Max 50 questions
+    if count > 50:
+        raise HTTPException(status_code=400, detail="Tek seferde maksimum 50 soru üretilebilir!")
+
+    # Total questions limit: Max 60 questions
+    current_total = len(game_manager.questions)
+    folder_id = payload.get("folder_id", game_manager.active_folder_id)
+    if count > 60:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Sistemde toplam soru sınırı maksimum 60 sorudur!"
+        )
+
+    difficulties = payload.get("difficulties")
+    questions = await gemini_service.generate_questions_with_gemini(
+        count=count,
+        difficulties=difficulties,
+        folder_id=folder_id
+    )
+
+    try:
+        await game_manager.set_questions(questions, folder_id=folder_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    folder_name = "Aktif Klasör"
+    if folder_id in game_manager.folders:
+        folder_name = game_manager.folders[folder_id].title
+
     return {
         "success": True,
         "count": len(questions),
+        "total_questions": len(game_manager.questions),
+        "folder_id": folder_id,
+        "folder_name": folder_name,
         "questions": [q.model_dump() for q in questions]
     }
 

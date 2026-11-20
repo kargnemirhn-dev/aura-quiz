@@ -320,18 +320,12 @@ function applyState(state) {
             .catch(() => {});
 
     } else if (newStatus === "PODIUM") {
-        if (lastStatus !== "PODIUM") {
-            window.soundManager.playCorrect();
-            // Confetti celebration
-            if (typeof confetti === "function") {
-                confetti({
-                    particleCount: 150,
-                    spread: 80,
-                    origin: { y: 0.6 }
-                });
-            }
-        }
+        const slot1 = document.getElementById("podium-slot-1");
+        const slot2 = document.getElementById("podium-slot-2");
+        const slot3 = document.getElementById("podium-slot-3");
+        const btnFull = document.getElementById("btn-show-full-leaderboard");
 
+        // Fetch top 3 and initialize
         fetch("/api/leaderboard?limit=3")
             .then(res => res.json())
             .then(top3 => {
@@ -356,11 +350,109 @@ function applyState(state) {
                 document.getElementById("podium-3-name").innerText = p3.name;
                 document.getElementById("podium-3-school").innerText = p3.school;
                 document.getElementById("podium-3-score").innerText = `${p3.score} Puan`;
+
+                // Sequential Kahoot-style reveal if new entry to PODIUM
+                if (lastStatus !== "PODIUM") {
+                    if (slot1) slot1.classList.remove("podium-revealed");
+                    if (slot2) slot2.classList.remove("podium-revealed");
+                    if (slot3) slot3.classList.remove("podium-revealed");
+                    if (btnFull) btnFull.classList.add("hidden");
+
+                    // Step 1: 3rd Place Rises (0.6s)
+                    setTimeout(() => {
+                        if (slot3) {
+                            slot3.classList.add("podium-revealed");
+                            window.soundManager.playTick();
+                        }
+                    }, 600);
+
+                    // Step 2: 2nd Place Rises (2.2s)
+                    setTimeout(() => {
+                        if (slot2) {
+                            slot2.classList.add("podium-revealed");
+                            window.soundManager.playTick();
+                        }
+                    }, 2200);
+
+                    // Step 3: 1st Place Champion Rises with Fanfare & Confetti (4.2s)
+                    setTimeout(() => {
+                        if (slot1) {
+                            slot1.classList.add("podium-revealed");
+                            window.soundManager.playCorrect();
+                        }
+                        if (typeof confetti === "function") {
+                            confetti({
+                                particleCount: 180,
+                                spread: 100,
+                                origin: { y: 0.55 }
+                            });
+                        }
+                    }, 4200);
+
+                    // Step 4: Show "Bütün Sıralamayı Göster" Button (5.5s)
+                    setTimeout(() => {
+                        if (btnFull) {
+                            btnFull.classList.remove("hidden");
+                            btnFull.classList.add("fade-in");
+                        }
+                    }, 5500);
+                } else {
+                    // Already in PODIUM, ensure elements are visible
+                    if (slot1) slot1.classList.add("podium-revealed");
+                    if (slot2) slot2.classList.add("podium-revealed");
+                    if (slot3) slot3.classList.add("podium-revealed");
+                    if (btnFull) btnFull.classList.remove("hidden");
+                }
             })
             .catch(() => {});
     }
 
     lastStatus = newStatus;
+}
+
+// Full Leaderboard Modal Functions (Requirement 6)
+async function openFullLeaderboardModal() {
+    const modal = document.getElementById("modal-full-leaderboard");
+    const tbody = document.getElementById("full-leaderboard-tbody");
+    if (!modal) return;
+
+    modal.classList.remove("hidden");
+    window.soundManager.playClick();
+
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400 font-semibold">Tüm katılımcı sıralaması yükleniyor...</td></tr>`;
+        try {
+            const res = await fetch("/api/leaderboard?limit=100");
+            const players = await res.json();
+            if (players && players.length > 0) {
+                tbody.innerHTML = players.map(p => `
+                    <tr class="hover:bg-slate-800/60 transition-colors ${p.rank === 1 ? 'bg-amber-500/10' : p.rank === 2 ? 'bg-slate-300/5' : p.rank === 3 ? 'bg-amber-600/5' : ''}">
+                        <td class="p-3.5 font-mono font-black text-center ${p.rank === 1 ? 'text-amber-400 text-lg' : p.rank === 2 ? 'text-slate-300 text-lg' : p.rank === 3 ? 'text-amber-600 text-lg' : 'text-slate-500'}">
+                            ${p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : '#' + p.rank}
+                        </td>
+                        <td class="p-3.5">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="text-2xl">${p.avatar || '🚀'}</span>
+                                <span class="font-extrabold text-white text-sm">${escapeHtml(p.name)}</span>
+                            </div>
+                        </td>
+                        <td class="p-3.5 text-xs text-indigo-300 font-medium">${escapeHtml(p.school || 'Diğer')}</td>
+                        <td class="p-3.5 text-right font-mono font-black text-amber-400 text-sm">${p.score} Puan</td>
+                    </tr>
+                `).join("");
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500">Henüz katılımcı bulunamadı.</td></tr>`;
+            }
+        } catch(e) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-rose-400">Veriler yüklenirken hata oluştu.</td></tr>`;
+        }
+    }
+}
+
+function closeFullLeaderboardModal() {
+    const modal = document.getElementById("modal-full-leaderboard");
+    if (modal) modal.classList.add("hidden");
+    window.soundManager.playClick();
 }
 
 // Init Stage

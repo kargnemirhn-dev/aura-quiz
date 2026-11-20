@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional, Literal
+from typing import List, Dict, Optional, Literal, Any
 from pydantic import BaseModel, Field
 import time
 
@@ -15,11 +15,29 @@ class Question(BaseModel):
     correct: Literal["A", "B", "C", "D"]
     explanation: Optional[str] = ""
     duration: int = 15
+    difficulty: Optional[str] = "Orta" # Çok Kolay, Kolay, Orta, Zor
+    folder_id: Optional[str] = "default"
+
+class QuizFolder(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = ""
+    created_at: float = Field(default_factory=time.time)
+    questions: List[Question] = Field(default_factory=list)
+
+class QuizFolderCreate(BaseModel):
+    admin_pin: str
+    title: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = ""
+
+    def get_title(self) -> str:
+        return self.title or self.name or "Yeni Quiz Klasörü"
 
 class Player(BaseModel):
     id: str
     name: str
-    school: str = "Bağımsız"
+    school: str = "Diğer"
     avatar: str = "🚀"
     score: int = 0
     streak: int = 0
@@ -27,6 +45,19 @@ class Player(BaseModel):
     answered_at: Optional[float] = None
     is_correct: Optional[bool] = None
     joined_at: float = Field(default_factory=time.time)
+
+class PlayerScoreAdjustRequest(BaseModel):
+    admin_pin: str
+    player_id: str
+    score_delta: Optional[int] = None
+    delta: Optional[int] = None
+
+    def get_delta(self) -> int:
+        if self.score_delta is not None:
+            return self.score_delta
+        if self.delta is not None:
+            return self.delta
+        return 0
 
 class AnswerSubmission(BaseModel):
     player_id: str
@@ -59,6 +90,20 @@ class ManualQuestionCreate(BaseModel):
     correct: Literal["A", "B", "C", "D"]
     explanation: Optional[str] = ""
     duration: int = 15
+    difficulty: Optional[str] = "Orta"
+    folder_id: Optional[str] = "default"
+
+class DifficultyCounts(BaseModel):
+    cok_kolay: int = 0
+    kolay: int = 0
+    orta: int = 0
+    zor: int = 0
+
+class AIQuestionGenerateRequest(BaseModel):
+    admin_pin: str
+    count: int = Field(default=30, ge=1, le=50) # Maximum 50 questions per generation
+    difficulties: Optional[DifficultyCounts] = None
+    folder_id: Optional[str] = "default"
 
 class EmojiReaction(BaseModel):
     emoji: str
@@ -98,9 +143,10 @@ class GameState(BaseModel):
     timer_remaining: int = 15
     leaderboard_countdown: int = 5
     question_start_timestamp: float = 0
-    current_question: Optional[Dict] = None # Will redact correct answer when sent to stage/players during QUESTION status
+    current_question: Optional[Dict] = None
     participants_count: int = 0
     answers_count: int = 0
     answer_stats: Dict[str, int] = Field(default_factory=lambda: {"A": 0, "B": 0, "C": 0, "D": 0})
     last_reaction: Optional[Dict] = None
+    active_folder_id: Optional[str] = "default"
     updated_at: float = Field(default_factory=time.time)

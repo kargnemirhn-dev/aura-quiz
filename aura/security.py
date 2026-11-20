@@ -2,18 +2,23 @@ import re
 import time
 from typing import Dict, List, Optional, Tuple
 
-# Comprehensive Bad Words & Political Terminology Blacklist (Normalized lowercase)
+# Comprehensive Bad Words & Political Terminology Blacklist
 FORBIDDEN_TERMS = {
     # Profanity, insults, slang
     "amk", "aq", "oç", "piç", "sik", "siktir", "sikeyim", "yarrak", "yarak", "göt", "ibne",
     "orospu", "kaltak", "fahişe", "kahpe", "pezevenk", "puşt", "dalyarak", "amcık", "taşak",
     "meme", "götlek", "dangalak", "gerizekalı", "aptal", "salak", "ahmak", "bok", "it",
-    # Political parties, abbreviations, political figures & illegal organizations
-    "akp", "akparti", "chp", "mhp", "hdp", "dem", "demparti", "iyiparti", "tip", "zaferpartisi",
-    "hudapar", "deva", "gelecekpartisi", "refah", "saadet", "binali", "kılıçdaroğlu", "kilicdaroglu",
-    "erdoğan", "erdogan", "bahçeli", "bahceli", "özgürözel", "ozgurozel", "imamoğlu", "imamoglu",
-    "yavaş", "mansuryavas", "demirtas", "demirtaş", "öcalan", "ocalan", "apo", "pkk", "ypg", "pyd",
-    "fetö", "feto", "dhkpc", "hizbullah", "komünist", "faşist", "terörist", "darbe"
+    # Political parties, leaders, acronyms and slang derivatives
+    "akp", "akparti", "akpli", "chp", "chpli", "mhp", "mhpli", "hdp", "hdpli", "dem", "demparti", "demli",
+    "iyiparti", "tip", "tipli", "zaferpartisi", "hudapar", "deva", "gelecekpartisi", "refah", "saadet",
+    "binali", "kılıçdaroğlu", "kilicdaroglu", "kemal", "kemalist",
+    "erdoğan", "erdogan", "tayyip", "rte", "rtesi", "reis",
+    "bahçeli", "bahceli", "özgürözel", "ozgurozel", "imamoğlu", "imamoglu",
+    "yavaş", "mansuryavas", "demirtas", "demirtaş", "selo", "selocan",
+    "öcalan", "ocalan", "apo", "aposi", "apocu", "apoist",
+    "pkk", "pkkli", "ypg", "ypgli", "pyd", "pydli",
+    "fetö", "feto", "fetocu", "fetullah", "dhkpc", "hizbullah",
+    "komünist", "faşist", "terörist", "darbe", "darbeci", "bozkurt", "ülkücü", "ulkucu"
 }
 
 # Exact political/slang tokens and party variations
@@ -21,7 +26,8 @@ POLITICAL_ACRONYMS = {
     "akp", "akpli", "akparti", "chp", "chpli", "mhp", "mhpli",
     "hdp", "hdpli", "dem", "demli", "demparti", "tip", "tipli",
     "pkk", "pkkli", "ypg", "ypgli", "pyd", "pydli", "fetö", "feto", "fetocu",
-    "dhkpc", "hizbullah", "apo", "apocu"
+    "dhkpc", "hizbullah", "apo", "aposi", "apocu", "apoist",
+    "rte", "rtesi", "reis", "tayyip", "selo", "selocan"
 }
 
 # Substring terms (safe distinct terms that do not collide with common Turkish names like Demir)
@@ -29,8 +35,15 @@ SUBSTRING_TERMS = {
     "orospu", "pezevenk", "siktir", "sikeyim", "yarrak", "yarak", "amcık", "dalyarak",
     "kaltak", "fahişe", "puşt", "kılıçdaroğlu", "kilicdaroglu", "erdoğan", "erdogan",
     "bahçeli", "bahceli", "özgürözel", "ozgurozel", "imamoğlu", "imamoglu",
-    "mansuryavas", "demirtaş", "demirtas", "öcalan", "ocalan", "terörist", "komünist", "faşist"
+    "mansuryavas", "demirtaş", "demirtas", "öcalan", "ocalan", "terörist", "komünist", "faşist",
+    "rtesi", "aposi", "fetocu", "fetullah", "darbeci"
 }
+
+# Troll & Gibberish Patterns (keyboard smash)
+TROLL_PATTERNS = [
+    r"asdasd", r"qweqwe", r"zxczxc", r"qwerty", r"sadasd", r"fghjkl",
+    r"deneme", r"testtest", r"admin", r"anonim", r"misafir"
+]
 
 def normalize_text_for_filter(text: str) -> str:
     """Normalizes Turkish text, removes repeated letters and leet-speak variations"""
@@ -65,8 +78,11 @@ class SecurityService:
         Validates player name according to Summit guidelines:
         1. Letter-only rule: Only Turkish/Latin letters & space allowed.
            If violated -> warning only, NO ban.
-        2. Bad words & political filter:
-           If violated -> warning, 3 attempts limit -> permanent BAN.
+        2. Real Name and Surname validation: Must have at least First name and Last name (2 words).
+           If violated -> friendly formatting warning, NO ban.
+        3. Troll/Gibberish check (repeated sequences, keyboard smash) -> warning, NO ban.
+        4. Bad words, profanity, and political party / figure derivatives ("rtesi", "aposi", etc.)
+           If violated -> strict warning, 3 attempts limit -> permanent BAN.
         """
         if self.is_banned(identifier):
             return False, "Sistemden 3 kez uygunsuz kural ihlali yaptığınız için kalıcı olarak BANLANDINIZ!", {
@@ -78,20 +94,48 @@ class SecurityService:
             return False, "Lütfen bir isim soyisim giriniz!", {"type": "empty"}
 
         # RULE 1: Sadece Harf Kuralı (Only Letters and spaces allowed)
-        # Allows Turkish chars: ç, Ç, ğ, Ğ, ı, İ, ö, Ö, ş, Ş, ü, Ü and Latin letters and space
         if not re.match(r'^[a-zA-ZçÇğĞıİöÖşŞüÜ\s]+$', cleaned):
             return False, "İsim Soyisim sadece harflerden oluşmalıdır! Sayı, rakam veya özel karakter kullanmayınız.", {
                 "type": "invalid_chars",
                 "is_letter_error": True
             }
 
-        # RULE 2: Argo, Küfür ve Siyasi İsim Engellemesi
+        # RULE 2: Gerçek Ad ve Soyad Doğrulaması (En az 2 kelime, her biri en az 2 harf)
+        words = cleaned.split()
+        if len(words) < 2:
+            return False, "Lütfen geçerli bir Ad ve Soyad giriniz (Örn: Ahmet Yılmaz).", {
+                "type": "incomplete_name",
+                "is_formatting_error": True
+            }
+
+        for w in words:
+            if len(w) < 2:
+                return False, "Ad ve soyadınızın her bir parçası en az 2 harften oluşmalıdır.", {
+                    "type": "too_short_word",
+                    "is_formatting_error": True
+                }
+
+        # RULE 3: Anlamsız Harf Tekrarı ve Troll Giriş Kontrolü
+        cleaned_lower = cleaned.lower()
+        if re.search(r'(.)\1{3,}', cleaned_lower): # 4 or more same character in a row
+            return False, "Lütfen gerçek bir Ad Soyad giriniz (Tekrarlayan sahte karakterler tespit edildi).", {
+                "type": "troll_name",
+                "is_formatting_error": True
+            }
+
+        for pattern in TROLL_PATTERNS:
+            if pattern in cleaned_lower:
+                return False, "Lütfen gerçek bir Ad Soyad giriniz (Geçersiz isim yapısı).", {
+                    "type": "troll_name",
+                    "is_formatting_error": True
+                }
+
+        # RULE 4: Argo, Küfür ve Siyasi İsim Engellemesi (Siyasi Kısaltmalar: "rtesi", "aposi" vb.)
         normalized = normalize_text_for_filter(cleaned)
         contains_forbidden = False
         matched_term = ""
 
         # Check individual words (Exact match or political acronym)
-        words = cleaned.lower().split()
         for w in words:
             norm_w = normalize_text_for_filter(w)
             if norm_w in POLITICAL_ACRONYMS or norm_w in FORBIDDEN_TERMS:
@@ -99,7 +143,7 @@ class SecurityService:
                 matched_term = w
                 break
 
-        # Check distinct substring terms (like specific profanities or full political names)
+        # Check distinct substring terms (like specific profanities, political leaders and political suffixes)
         if not contains_forbidden:
             for term in SUBSTRING_TERMS:
                 norm_term = normalize_text_for_filter(term)
@@ -119,7 +163,7 @@ class SecurityService:
                     "identifier": identifier,
                     "name": cleaned,
                     "last_attempt_name": cleaned,
-                    "reason": f"3 kez kural ihlali (Yasaklı/Argo kelime: '{matched_term}')",
+                    "reason": f"3 kez kural ihlali (Yasaklı/Siyasi terim: '{matched_term}')",
                     "banned_at": time.time(),
                     "attempts": current_violations
                 }
@@ -129,7 +173,7 @@ class SecurityService:
                 }
             else:
                 remaining = 3 - current_violations
-                return False, f"UYARI ({current_violations}/3 Hak): Argo, küfür veya siyasi isim kullanılamaz! Kalan hak: {remaining}. (3 ihlalde süresiz banlanırsınız)", {
+                return False, f"UYARI ({current_violations}/3 Hak): Argo, küfür veya siyasi isim/kısaltma kullanılamaz! Kalan hak: {remaining}. (3 ihlalde süresiz banlanırsınız)", {
                     "type": "bad_word",
                     "attempts": current_violations,
                     "remaining": remaining

@@ -43,21 +43,21 @@
         </div>
     </header>
 
-    <!-- Admin Navigation Tabs -->
-    <div class="flex items-center space-x-2 border-b border-slate-800 pb-3 mb-6 overflow-x-auto">
-        <button onclick="switchAdminTab('control')" id="tab-btn-control" class="admin-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-indigo-600 text-white shadow-md shadow-indigo-600/30 transition-all">
+    <!-- Admin Navigation Tabs (Requirement 1: Sıkışma Önlenmiş, Responsive & Kaydırılabilir Flex Yapı) -->
+    <div class="flex items-center gap-3 border-b border-slate-800 pb-4 mb-6 overflow-x-auto no-scrollbar flex-nowrap md:flex-wrap">
+        <button onclick="switchAdminTab('control')" id="tab-btn-control" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-extrabold bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all whitespace-nowrap">
             <i data-lucide="gamepad-2" class="w-4 h-4"></i>
             <span>Canlı Yarışma Kontrolü</span>
         </button>
-        <button onclick="switchAdminTab('quizzes')" id="tab-btn-quizzes" class="admin-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
-            <i data-lucide="file-question" class="w-4 h-4"></i>
+        <button onclick="switchAdminTab('quizzes')" id="tab-btn-quizzes" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all whitespace-nowrap">
+            <i data-lucide="folder-kanban" class="w-4 h-4"></i>
             <span>Quizlerim & Soru Bankası</span>
         </button>
-        <button onclick="switchAdminTab('reports')" id="tab-btn-reports" class="admin-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+        <button onclick="switchAdminTab('reports')" id="tab-btn-reports" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all whitespace-nowrap">
             <i data-lucide="download" class="w-4 h-4"></i>
             <span>Sonuçları İndir (Excel & PDF)</span>
         </button>
-        <button onclick="switchAdminTab('security')" id="tab-btn-security" class="admin-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+        <button onclick="switchAdminTab('security')" id="tab-btn-security" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all whitespace-nowrap">
             <i data-lucide="shield-alert" class="w-4 h-4"></i>
             <span>Ban Yönetimi</span>
         </button>
@@ -93,7 +93,7 @@
                 </button>
             </div>
 
-            <!-- 2. Independent Timers Card (Requirement 4) -->
+            <!-- 2. Independent Timers Card (Requirement 10) -->
             <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
                 <div>
                     <h3 class="text-sm sm:text-base font-extrabold text-white mb-1 flex items-center space-x-2">
@@ -115,13 +115,14 @@
                     </div>
                 </div>
 
-                <!-- Independent Otomatik Geçiş Süresi (3s, 5s, 10s) -->
+                <!-- Independent Otomatik Geçiş Süresi (3s, 5s, 10s, 15s) -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Liderlik Geçiş Süresi</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="setTransitionDelay(3)" id="btn-trans-3" class="py-2 rounded-xl border border-slate-700 text-xs font-black text-slate-300 hover:border-indigo-500 transition-all">3 Saniye</button>
-                        <button onclick="setTransitionDelay(5)" id="btn-trans-5" class="py-2 rounded-xl border border-indigo-500 bg-indigo-600/20 text-xs font-black text-indigo-300 transition-all">5 Saniye</button>
-                        <button onclick="setTransitionDelay(10)" id="btn-trans-10" class="py-2 rounded-xl border border-slate-700 text-xs font-black text-slate-300 hover:border-indigo-500 transition-all">10 Saniye</button>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button onclick="setTransitionDelay(3)" id="btn-trans-3" class="py-2 rounded-xl border border-slate-700 text-xs font-black text-slate-300 hover:border-indigo-500 transition-all">3s</button>
+                        <button onclick="setTransitionDelay(5)" id="btn-trans-5" class="py-2 rounded-xl border border-indigo-500 bg-indigo-600/20 text-xs font-black text-indigo-300 transition-all">5s</button>
+                        <button onclick="setTransitionDelay(10)" id="btn-trans-10" class="py-2 rounded-xl border border-slate-700 text-xs font-black text-slate-300 hover:border-indigo-500 transition-all">10s</button>
+                        <button onclick="setTransitionDelay(15)" id="btn-trans-15" class="py-2 rounded-xl border border-slate-700 text-xs font-black text-slate-300 hover:border-indigo-500 transition-all">15s</button>
                     </div>
                 </div>
 
@@ -196,19 +197,22 @@
                 </div>
             </div>
 
-            <!-- Live Participants Quick List -->
+            <!-- Live Participants List with Score Adjustments (Requirement 7: + and - Buttons) -->
             <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-extrabold text-white flex items-center space-x-2">
-                        <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
-                        <span>Odadaki Yarışmacılar</span>
-                    </h3>
+                    <div>
+                        <h3 class="text-sm font-extrabold text-white flex items-center space-x-2">
+                            <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Odadaki Yarışmacılar & Manuel Puan Yönetimi</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Yarışmacılara manuel olarak puan ekleyebilir (+) veya silebilirsiniz (-).</p>
+                    </div>
                     <button onclick="refreshAdminPlayers()" class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all text-xs flex items-center space-x-1">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                         <span>Yenile</span>
                     </button>
                 </div>
-                <div id="admin-players-container" class="max-h-60 overflow-y-auto space-y-2 pr-1">
+                <div id="admin-players-container" class="max-h-72 overflow-y-auto space-y-2 pr-1">
                     <p class="text-xs text-slate-500 py-3 text-center">Yarışmacı listesi yükleniyor...</p>
                 </div>
             </div>
@@ -216,56 +220,84 @@
 
     </section>
 
-    <!-- TAB 2: QUİZLERİM & SORU BANKASI (Requirement 1) -->
+    <!-- TAB 2: QUİZLERİM & KLASÖR YAPILI SORU BANKASI (Requirement 8 & 9) -->
     <section id="tab-section-quizzes" class="hidden space-y-6">
         <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <!-- Header & Action Buttons -->
             <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-800">
                 <div>
                     <h2 class="text-lg font-black text-white flex items-center space-x-2">
-                        <i data-lucide="file-question" class="w-5 h-5 text-indigo-400"></i>
-                        <span>Quizlerim & Soru Yönetimi</span>
+                        <i data-lucide="folder-kanban" class="w-5 h-5 text-indigo-400"></i>
+                        <span>Quizlerim & Klasör Yapılı Soru Yönetimi</span>
                     </h2>
-                    <p class="text-xs text-slate-400">Manuel soru ekleyin veya Gemini Yapay Zeka modeli ile 30 özgün soru üretin.</p>
+                    <p class="text-xs text-slate-400">Her quiz kendi klasöründe saklanır. Maksimum 60 soru sınırıyla yönetilir.</p>
                 </div>
 
-                <div class="flex items-center space-x-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Yeni Klasör Oluştur Butonu -->
+                    <button onclick="openCreateFolderModal()" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs border border-slate-700 transition-all active:scale-95 shadow-md">
+                        <i data-lucide="folder-plus" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Yeni Klasör Oluştur</span>
+                    </button>
+
                     <!-- Manuel Soru Ekle Butonu -->
                     <button onclick="openManualQuestionModal()" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs border border-slate-700 transition-all active:scale-95 shadow-md">
                         <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
                         <span>Manuel Soru Ekle</span>
                     </button>
 
-                    <!-- Gemini AI 30 Soru Butonu -->
-                    <button id="btn-generate-ai" onclick="generateAiQuestions()" class="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-purple-600/25 active:scale-95 transition-all">
-                        <i data-lucide="bot" class="w-4 h-4"></i>
-                        <span>30 Yeni Soru Üret (Gemini API)</span>
+                    <!-- Rainbow RGB Efektli AI Soru Üretici Butonu (Requirement 8 & 9) -->
+                    <button id="btn-generate-ai-rgb" onclick="openAiGeneratorModal()" class="btn-rainbow-rgb inline-flex items-center space-x-2 font-black px-5 py-2.5 rounded-xl text-xs shadow-xl active:scale-95">
+                        <i data-lucide="sparkles" class="w-4 h-4 animate-spin"></i>
+                        <span>✨ AI Soru Üretici (Rainbow RGB)</span>
                     </button>
                 </div>
             </div>
 
             <div id="ai-status-notice" class="hidden p-3 rounded-xl text-xs font-bold my-4"></div>
 
-            <!-- Questions Table with Delete Button -->
-            <div class="border border-slate-800 rounded-2xl overflow-hidden mt-5 max-h-[500px] overflow-y-auto">
-                <table class="w-full text-left text-xs text-slate-300">
-                    <thead class="bg-slate-950 text-slate-400 uppercase font-bold sticky top-0">
-                        <tr>
-                            <th class="p-3.5">#</th>
-                            <th class="p-3.5">Soru</th>
-                            <th class="p-3.5">Doğru</th>
-                            <th class="p-3.5">Süre</th>
-                            <th class="p-3.5 text-right">İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody id="questions-table-body" class="divide-y divide-slate-800/80 bg-slate-900/50">
-                        <!-- Populated with questions -->
-                    </tbody>
-                </table>
+            <!-- Quiz Folders Grid Container (Requirement 8) -->
+            <div class="mt-6">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Quiz Klasörleri</span>
+                    <span id="folders-total-badge" class="text-xs text-indigo-400 font-bold">1 Klasör</span>
+                </div>
+                <div id="quiz-folders-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- Populated dynamically by admin.js -->
+                </div>
+            </div>
+
+            <!-- Active Folder Questions Table -->
+            <div class="border border-slate-800 rounded-2xl overflow-hidden mt-6">
+                <div class="bg-slate-950 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="list" class="w-4 h-4 text-indigo-400"></i>
+                        <span id="active-folder-table-title" class="text-xs font-bold text-white">Aktif Klasör Soruları</span>
+                    </div>
+                    <span id="active-folder-questions-count" class="text-xs font-mono font-bold text-slate-400">0 / 60 Soru</span>
+                </div>
+                <div class="max-h-[460px] overflow-y-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-950/80 text-slate-400 uppercase font-bold sticky top-0">
+                            <tr>
+                                <th class="p-3.5">#</th>
+                                <th class="p-3.5">Soru</th>
+                                <th class="p-3.5">Zorluk</th>
+                                <th class="p-3.5">Doğru</th>
+                                <th class="p-3.5">Süre</th>
+                                <th class="p-3.5 text-right">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="questions-table-body" class="divide-y divide-slate-800/80 bg-slate-900/50">
+                            <!-- Populated with questions -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- TAB 3: SONUÇLARI İNDİR (Excel & PDF) (Requirement 3) -->
+    <!-- TAB 3: SONUÇLARI İNDİR (Excel & PDF) -->
     <section id="tab-section-reports" class="hidden space-y-6">
         <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl text-center max-w-3xl mx-auto">
             <div class="w-16 h-16 rounded-3xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/20">
@@ -294,7 +326,7 @@
         </div>
     </section>
 
-    <!-- TAB 4: BAN YÖNETİMİ (Requirement 9) -->
+    <!-- TAB 4: BAN YÖNETİMİ -->
     <section id="tab-section-security" class="hidden space-y-6">
         <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
             <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
@@ -303,7 +335,7 @@
                         <i data-lucide="shield-alert" class="w-5 h-5 text-rose-400"></i>
                         <span>Ban Yönetimi (3 Hak İhlali)</span>
                     </h2>
-                    <p class="text-xs text-slate-400">Argo, küfür veya siyasi içerik nedeniyle kalıcı olarak engellenen katılımcıları yönetin.</p>
+                    <p class="text-xs text-slate-400">Argo, küfür veya siyasi kısaltmalar/içerikler nedeniyle kalıcı olarak engellenen katılımcıları yönetin.</p>
                 </div>
                 <button onclick="loadBannedUsers()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all flex items-center space-x-1.5">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -389,7 +421,7 @@
         </div>
     </div>
 
-    <!-- MODAL 3: MANUEL SORU EKLE (Requirement 1) -->
+    <!-- MODAL 3: MANUEL SORU EKLE -->
     <div id="modal-manual-question" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
             <button onclick="closeManualQuestionModal()" class="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
@@ -407,6 +439,14 @@
             </div>
 
             <form onsubmit="handleManualQuestionSubmit(event)" class="space-y-3.5 text-left text-xs">
+                <!-- Hedef Klasör -->
+                <div>
+                    <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Hedef Klasör</label>
+                    <select id="mq-folder" class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white outline-none">
+                        <!-- Populated by admin.js -->
+                    </select>
+                </div>
+
                 <!-- Soru Metni -->
                 <div>
                     <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Soru Metni</label>
@@ -438,8 +478,8 @@
                     </div>
                 </div>
 
-                <!-- Doğru Şık & Süre -->
-                <div class="grid grid-cols-2 gap-2.5">
+                <!-- Doğru Şık, Zorluk & Süre -->
+                <div class="grid grid-cols-3 gap-2.5">
                     <div>
                         <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Doğru Cevap</label>
                         <select id="mq-correct" required class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white outline-none">
@@ -450,7 +490,16 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Soru Süresi (Saniye)</label>
+                        <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Zorluk Seviyesi</label>
+                        <select id="mq-difficulty" class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white outline-none">
+                            <option value="Çok Kolay">🟢 Çok Kolay</option>
+                            <option value="Kolay">🔵 Kolay</option>
+                            <option value="Orta" selected>🟡 Orta</option>
+                            <option value="Zor">🔴 Zor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Süre (Saniye)</label>
                         <input type="number" id="mq-duration" value="15" min="5" max="60" required
                             class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-white outline-none">
                     </div>
@@ -465,6 +514,122 @@
 
                 <button type="submit" id="btn-save-manual-q" class="mt-3 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-600/30 active:scale-95">
                     Soruyu Kaydet ve Listeye Ekle ✓
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: YENİ KLASÖR OLUŞTUR (Requirement 8) -->
+    <div id="modal-create-folder" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+            <button onclick="closeCreateFolderModal()" class="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-5 pb-3 border-b border-slate-800">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold">
+                    <i data-lucide="folder-plus" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-white">Yeni Quiz Klasörü</h3>
+                    <p class="text-xs text-slate-400">Özel bir yarışma oturumu için klasör açın</p>
+                </div>
+            </div>
+
+            <form onsubmit="handleCreateFolderSubmit(event)" class="space-y-4 text-left text-xs">
+                <div>
+                    <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Klasör Başlığı</label>
+                    <input type="text" id="folder-title" required placeholder="Örn: 2. Gün Finalleri Quiz Seti"
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-white font-bold outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Açıklama (Opsiyonel)</label>
+                    <textarea id="folder-desc" rows="2" placeholder="Örn: Yapay zeka ajanları ve büyük dil modelleri temalı 20 soru."
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl p-3 text-white outline-none"></textarea>
+                </div>
+
+                <button type="submit" id="btn-submit-create-folder" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30 active:scale-95">
+                    Klasörü Oluştur 📁
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: YAPAY ZEKA SORU ÜRETİCİ (Zorluk Dağılımlı & Sınır Kontrollü) (Requirement 8 & 9) -->
+    <div id="modal-ai-generator" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl relative">
+            <button onclick="closeAiGeneratorModal()" class="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-5 pb-3 border-b border-slate-800">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/25">
+                    <i data-lucide="sparkles" class="w-6 h-6 animate-pulse"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-white">Yapay Zeka Soru Üretici (Gemini)</h3>
+                    <p class="text-xs text-slate-400">Tek seferde maks. 50 soru • Toplam sistem sınırı 60 soru</p>
+                </div>
+            </div>
+
+            <form onsubmit="handleAiGenerateSubmit(event)" class="space-y-4 text-left text-xs">
+                <!-- Hedef Klasör -->
+                <div>
+                    <label class="block font-bold uppercase tracking-wider text-slate-400 mb-1">Doldurulacak Hedef Klasör</label>
+                    <select id="ai-folder-select" class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-white outline-none">
+                        <!-- Populated by admin.js -->
+                    </select>
+                </div>
+
+                <!-- Toplam Soru Sayısı (Maks 50) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block font-bold uppercase tracking-wider text-slate-400">Üretilecek Soru Sayısı</label>
+                        <span class="text-[11px] text-pink-400 font-extrabold">Maksimum 50 Soru</span>
+                    </div>
+                    <input type="number" id="ai-total-count" value="30" min="1" max="50" required
+                        oninput="distributeDifficultiesAutomatically(this.value)"
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-xl px-4 py-2.5 text-white font-mono font-black text-base outline-none">
+                </div>
+
+                <!-- Zorluk Seviyeleri Dağılımı (Requirement 9) -->
+                <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                    <span class="text-xs font-black uppercase tracking-wider text-slate-300 block mb-1">
+                        Zorluk Seviyesi Dağılımı
+                    </span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-emerald-400 mb-1">🟢 Çok Kolay (Adet)</label>
+                            <input type="number" id="diff-cok-kolay" value="5" min="0" max="50"
+                                class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-blue-400 mb-1">🔵 Kolay (Adet)</label>
+                            <input type="number" id="diff-kolay" value="10" min="0" max="50"
+                                class="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-yellow-400 mb-1">🟡 Orta (Adet)</label>
+                            <input type="number" id="diff-orta" value="10" min="0" max="50"
+                                class="w-full bg-slate-900 border border-slate-700 focus:border-yellow-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-rose-400 mb-1">🔴 Zor (Adet)</label>
+                            <input type="number" id="diff-zor" value="5" min="0" max="50"
+                                class="w-full bg-slate-900 border border-slate-700 focus:border-rose-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System limits indicator -->
+                <div class="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[11px] text-indigo-300 flex items-center space-x-2">
+                    <i data-lucide="info" class="w-4 h-4 flex-shrink-0 text-indigo-400"></i>
+                    <span>Sistem toplamda en fazla 60 soru saklar. Tek seferde en fazla 50 soru üretilebilir.</span>
+                </div>
+
+                <button type="submit" id="btn-submit-ai-generator" class="btn-rainbow-rgb w-full font-black py-3.5 rounded-xl text-sm shadow-xl active:scale-95 flex items-center justify-center space-x-2">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    <span>Soruları Üret ve Klasöre Yükle ✨</span>
                 </button>
             </form>
         </div>

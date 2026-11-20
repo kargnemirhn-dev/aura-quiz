@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional, Any
 from aura.config import settings
 from aura.models import Question, QuestionOption
 
@@ -405,8 +405,9 @@ class GeminiQuestionService:
         self.api_key = settings.GEMINI_API_KEY
         self.model_name = settings.GEMINI_MODEL
 
-    def get_default_questions(self) -> List[Question]:
-        """Returns the curated default 30 summit questions"""
+    def get_default_questions(self, folder_id: str = "default") -> List[Question]:
+        """Returns the curated default 30 summit questions with difficulties tagged"""
+        difficulties = ["Kolay", "Orta", "Zor", "Çok Kolay"]
         return [
             Question(
                 id=q["id"],
@@ -414,23 +415,51 @@ class GeminiQuestionService:
                 options=QuestionOption(**q["options"]),
                 correct=q["correct"],
                 explanation=q.get("explanation", ""),
-                duration=q.get("duration", 15)
+                duration=q.get("duration", 15),
+                difficulty=difficulties[(q["id"] - 1) % len(difficulties)],
+                folder_id=folder_id
             )
             for q in FALLBACK_QUESTIONS
         ]
 
-    async def generate_questions_with_gemini(self, count: int = 30) -> List[Question]:
+    async def generate_questions_with_gemini(
+        self,
+        count: int = 30,
+        difficulties: Optional[Dict[str, int]] = None,
+        folder_id: str = "default"
+    ) -> List[Question]:
         """
         Uses Gemini API (google-genai SDK or direct REST) to generate count fresh,
-        authentic, summit-themed questions in Turkish.
+        authentic, summit-themed questions in Turkish with optional difficulty distribution.
+        Max 50 questions per single generation request.
         """
+        # Enforce maximum 50 questions per single request (Requirement 9)
+        count = min(50, max(1, count))
+
         if not self.api_key:
             logger.warning("GEMINI_API_KEY is not set. Returning curated fallback questions.")
-            return self.get_default_questions()[:count]
+            return self.get_default_questions(folder_id)[:count]
+
+        diff_instructions = ""
+        if difficulties:
+            ck = difficulties.get("cok_kolay", 0)
+            k = difficulties.get("kolay", 0)
+            o = difficulties.get("orta", 0)
+            z = difficulties.get("zor", 0)
+            diff_instructions = f"""
+            SORU ZORLUK DAĞILIMI:
+            - Çok Kolay: {ck} adet
+            - Kolay: {k} adet
+            - Orta: {o} adet
+            - Zor: {z} adet
+            Lütfen her soru objesinde "difficulty" alanını ("Çok Kolay", "Kolay", "Orta", "Zor") olarak belirt.
+            """
 
         prompt = f"""
         Sen "AI ERA: TEKNOLOJİ & GİRİŞİMCİLİK ZİRVESİ" (Aura Bilgi Yarışması) için profesyonel bir soru hazırlama uzmanısın.
         Lütfen etkinliğin sahnesinde katılımcılara Kahoot tarzında sorulmak üzere TAM {count} ADET taze, özgün, merak uyandıran, Türkçe çoktan seçmeli yarışma sorusu üret.
+
+        {diff_instructions}
 
         Soruların dağılımı şu dengede olmalıdır:
         1. Yapay Zeka, Derin Öğrenme, LLM'ler, Üretken Yapay Zeka (GenAI), Ajanlar (Agentic AI), GPU ve donanım teknolojileri.
@@ -455,7 +484,8 @@ class GeminiQuestionService:
             }},
             "correct": "C",
             "explanation": "Kısa ve eğitici açıklama",
-            "duration": 15
+            "duration": 15,
+            "difficulty": "Orta"
           }},
           ...
         ]
@@ -489,19 +519,21 @@ class GeminiQuestionService:
                     options=QuestionOption(**item["options"]),
                     correct=item["correct"],
                     explanation=item.get("explanation", ""),
-                    duration=item.get("duration", 15)
+                    duration=item.get("duration", 15),
+                    difficulty=item.get("difficulty", "Orta"),
+                    folder_id=folder_id
                 )
                 questions.append(q)
 
             if len(questions) >= 5:
                 logger.info(f"Successfully generated {len(questions)} questions using Gemini API!")
-                return questions
+                return questions[:count]
             else:
                 logger.warning("Gemini returned fewer questions than expected. Falling back to curated bank.")
-                return self.get_default_questions()
+                return self.get_default_questions(folder_id)[:count]
 
         except Exception as e:
             logger.error(f"Error calling Gemini API: {e}. Utilizing fallback questions.")
-            return self.get_default_questions()
+            return self.get_default_questions(folder_id)[:count]
 
 gemini_service = GeminiQuestionService()

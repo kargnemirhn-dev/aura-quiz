@@ -254,23 +254,23 @@
             </div>
         </div>
 
-        <!-- 5. PODIUM VIEW (Yarışma Sonu 3., 2., 1. Podyum Animasyonu) -->
-        <div id="view-podium" class="w-full max-w-5xl flex flex-col items-center hidden fade-in">
+        <!-- 5. PODIUM VIEW (Yarışma Sonu 3., 2., 1. Podyum Animasyonu - Requirement 4 & 5) -->
+        <div id="view-podium" class="w-full max-w-5xl flex flex-col items-center hidden fade-in mt-2 pt-4 pb-6">
             <div class="text-center mb-8">
                 <span class="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-5 py-2 rounded-full text-sm font-black mb-3">
                     <i data-lucide="crown" class="w-4 h-4 text-amber-400"></i>
                     <span>ZİRVE ŞAMPİYONLARI</span>
                 </span>
-                <h3 class="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500">
+                <h3 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 tracking-tight">
                     Büyük Podyum
                 </h3>
             </div>
 
-            <!-- 3D Styled Podium Pedestals -->
-            <div class="w-full grid grid-cols-3 gap-4 sm:gap-8 items-end max-w-3xl min-h-[420px] px-4 pt-12">
+            <!-- 3D Styled Podium Pedestals (Sequential Kahoot-style reveal) -->
+            <div class="w-full grid grid-cols-3 gap-4 sm:gap-8 items-end max-w-3xl min-h-[420px] px-4 pt-8">
                 
                 <!-- 2nd Place (Left - Silver) -->
-                <div class="flex flex-col items-center podium-2">
+                <div id="podium-slot-2" class="podium-slot flex flex-col items-center">
                     <div id="podium-2-avatar" class="text-5xl sm:text-6xl mb-3 filter drop-shadow-lg">🥈</div>
                     <span id="podium-2-name" class="font-extrabold text-white text-base sm:text-xl truncate max-w-full">2. Yarışmacı</span>
                     <span id="podium-2-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Kurum</span>
@@ -282,9 +282,9 @@
                 </div>
 
                 <!-- 1st Place (Center - Gold Champion) -->
-                <div class="flex flex-col items-center podium-1">
+                <div id="podium-slot-1" class="podium-slot flex flex-col items-center">
                     <div class="relative">
-                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl animate-bounce">👑</div>
+                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl crown-anim">👑</div>
                         <div id="podium-1-avatar" class="text-6xl sm:text-7xl mb-3 filter drop-shadow-2xl">🏆</div>
                     </div>
                     <span id="podium-1-name" class="font-black text-amber-300 text-lg sm:text-2xl truncate max-w-full">1. Şampiyon</span>
@@ -297,7 +297,7 @@
                 </div>
 
                 <!-- 3rd Place (Right - Bronze) -->
-                <div class="flex flex-col items-center podium-3">
+                <div id="podium-slot-3" class="podium-slot flex flex-col items-center">
                     <div id="podium-3-avatar" class="text-5xl sm:text-6xl mb-3 filter drop-shadow-lg">🥉</div>
                     <span id="podium-3-name" class="font-extrabold text-white text-base sm:text-xl truncate max-w-full">3. Yarışmacı</span>
                     <span id="podium-3-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Kurum</span>
@@ -308,6 +308,15 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Action Button: Tüm Sıralamayı Göster (Requirement 6) -->
+            <div class="mt-10 text-center">
+                <button id="btn-show-full-leaderboard" onclick="openFullLeaderboardModal()"
+                    class="hidden inline-flex items-center space-x-2 bg-slate-900/90 hover:bg-slate-800 text-amber-400 hover:text-amber-300 font-extrabold px-6 py-3.5 rounded-2xl border border-amber-500/40 shadow-xl shadow-amber-500/10 transition-all active:scale-95 text-sm sm:text-base">
+                    <i data-lucide="list-ordered" class="w-5 h-5"></i>
+                    <span>Bütün Sıralamayı Göster 📋</span>
+                </button>
             </div>
         </div>
 
@@ -356,6 +365,42 @@
                     Sahneyi Aç ve Başlat 📺
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- FULL LEADERBOARD MODAL (Requirement 6: Bütün Sıralamayı Göster) -->
+    <div id="modal-full-leaderboard" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl relative">
+            <button onclick="closeFullLeaderboardModal()" class="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-800">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-2xl font-black">
+                    🏆
+                </div>
+                <div>
+                    <h3 class="text-xl sm:text-2xl font-black text-white">Tüm Katılımcı Sıralaması</h3>
+                    <p class="text-xs sm:text-sm text-slate-400">AI ERA Zirvesi Tam Sonuç Tablosu</p>
+                </div>
+            </div>
+
+            <!-- Scrollable Full Ranking Table -->
+            <div class="flex-1 overflow-y-auto pr-1">
+                <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+                    <thead class="bg-slate-950 text-slate-400 uppercase font-bold sticky top-0">
+                        <tr>
+                            <th class="p-3.5">Sıra</th>
+                            <th class="p-3.5">Yarışmacı</th>
+                            <th class="p-3.5">Okul / Kurum</th>
+                            <th class="p-3.5 text-right">Puan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="full-leaderboard-tbody" class="divide-y divide-slate-800/80 bg-slate-900/50">
+                        <!-- Populated by stage.js -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

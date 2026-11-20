@@ -3,12 +3,15 @@ let adminPin = sessionStorage.getItem("aura_admin_pin") || "";
 let currentQuestionDuration = 15;
 let currentTransitionDelay = 5;
 let isAutoMode = false;
+let activeFolderId = "default";
+let cachedFolders = [];
 
 // Check / Prompt Admin PIN
 function checkAdminAuth() {
     const modal = document.getElementById("modal-admin-auth");
     if (adminPin) {
         modal.classList.add("hidden");
+        loadFolders();
         loadQuestions();
         refreshAdminPlayers();
     } else {
@@ -35,6 +38,7 @@ async function handleAdminAuth(e) {
             sessionStorage.setItem("aura_admin_pin", adminPin);
             document.getElementById("modal-admin-auth").classList.add("hidden");
             window.soundManager.playCorrect();
+            loadFolders();
             loadQuestions();
             refreshAdminPlayers();
         } else {
@@ -62,15 +66,18 @@ function switchAdminTab(tabName) {
         const btn = document.getElementById(`tab-btn-${t}`);
         const sec = document.getElementById(`tab-section-${t}`);
         if (t === tabName) {
-            btn.className = "admin-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-indigo-600 text-white shadow-md shadow-indigo-600/30 transition-all";
+            btn.className = "admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-extrabold bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all whitespace-nowrap";
             sec.classList.remove("hidden");
         } else {
-            btn.className = "admin-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all";
+            btn.className = "admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all whitespace-nowrap";
             sec.classList.add("hidden");
         }
     });
 
-    if (tabName === "quizzes") loadQuestions();
+    if (tabName === "quizzes") {
+        loadFolders();
+        loadQuestions();
+    }
     if (tabName === "security") loadBannedUsers();
     if (tabName === "control") refreshAdminPlayers();
     window.soundManager.playClick();
@@ -296,7 +303,7 @@ function confirmResetRoom() {
     }
 }
 
-// Manual Question Modal Management (Requirement 1)
+// Manual Question Modal Management (Requirement 1 & 8)
 function openManualQuestionModal() {
     document.getElementById("modal-manual-question").classList.remove("hidden");
     window.soundManager.playClick();
@@ -320,6 +327,7 @@ async function handleManualQuestionSubmit(e) {
     const optC = document.getElementById("mq-opt-C").value.trim();
     const optD = document.getElementById("mq-opt-D").value.trim();
     const correctOpt = document.getElementById("mq-correct").value;
+    const difficulty = document.getElementById("mq-difficulty") ? document.getElementById("mq-difficulty").value : "Orta";
     const duration = parseInt(document.getElementById("mq-duration").value) || 15;
     const explanation = document.getElementById("mq-explanation").value.trim();
 
@@ -337,7 +345,9 @@ async function handleManualQuestionSubmit(e) {
                 options: { A: optA, B: optB, C: optC, D: optD },
                 correct: correctOpt,
                 explanation: explanation,
-                duration: duration
+                duration: duration,
+                difficulty: difficulty,
+                folder_id: activeFolderId || "default"
             })
         });
 
@@ -351,6 +361,7 @@ async function handleManualQuestionSubmit(e) {
             document.getElementById("mq-opt-D").value = "";
             document.getElementById("mq-explanation").value = "";
             window.soundManager.playCorrect();
+            loadFolders();
             loadQuestions();
             alert("Manuel soru başarıyla eklendi! 🎉");
         } else {
@@ -376,6 +387,7 @@ async function deleteQuestion(qId) {
         const data = await res.json();
         if (res.ok && data.success) {
             window.soundManager.playClick();
+            loadFolders();
             loadQuestions();
         } else {
             alert(data.detail || "Soru silinemedi!");
@@ -385,20 +397,237 @@ async function deleteQuestion(qId) {
     }
 }
 
-// Generate Questions with Gemini AI API
-async function generateAiQuestions() {
+// Folder Management (Requirement 8)
+async function loadFolders() {
+    if (!adminPin) return;
+    try {
+        const res = await fetch(`/api/admin/folders?admin_pin=${encodeURIComponent(adminPin)}`);
+        const data = await res.json();
+        if (res.ok && data.folders) {
+            cachedFolders = data.folders;
+            const container = document.getElementById("quiz-folders-container");
+            const badge = document.getElementById("folders-total-badge");
+            const selectEl = document.getElementById("ai-folder-select");
+
+            if (badge) badge.innerText = `${data.folders.length} Klasör`;
+
+            if (selectEl) {
+                selectEl.innerHTML = data.folders.map(f => `
+                    <option value="${f.id}" ${f.is_active ? 'selected' : ''}>${escapeHtml(f.name)} (${f.question_count} Soru)</option>
+                `).join("");
+            }
+
+            if (!container) return;
+
+            container.innerHTML = data.folders.map(f => {
+                const isActive = f.is_active || (f.id === activeFolderId);
+                return `
+                    <div class="p-5 rounded-2xl border transition-all ${isActive ? 'bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/30' : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'}">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'} flex items-center justify-center font-bold">
+                                    <i data-lucide="folder" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-extrabold text-sm text-white flex items-center space-x-2">
+                                        <span>${escapeHtml(f.name)}</span>
+                                        ${isActive ? '<span class="text-[10px] font-black bg-indigo-500 text-white px-2 py-0.5 rounded-full">AKTİF</span>' : ''}
+                                    </h4>
+                                    <p class="text-xs text-slate-400 line-clamp-1">${escapeHtml(f.description || 'Açıklama belirtilmedi')}</p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-mono font-black text-indigo-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg">
+                                ${f.question_count} / 60 Soru
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs">
+                            <button onclick="viewFolderQuestions('${f.id}')" class="text-slate-300 hover:text-white font-bold flex items-center space-x-1">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                <span>Soruları Göster</span>
+                            </button>
+                            <div class="flex items-center space-x-2">
+                                ${!isActive ? `
+                                    <button onclick="activateFolder('${f.id}')" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-bold transition-all">
+                                        Aktif Yap
+                                    </button>
+                                ` : ''}
+                                ${f.id !== 'default' ? `
+                                    <button onclick="deleteFolder('${f.id}')" class="p-1 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-all" title="Klasörü Sil">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+            lucide.createIcons();
+        }
+    } catch(e) {}
+}
+
+function viewFolderQuestions(folderId) {
+    activeFolderId = folderId;
+    loadQuestions();
+    window.soundManager.playClick();
+}
+
+async function activateFolder(folderId) {
+    if (!adminPin) return;
+    try {
+        const res = await fetch(`/api/admin/folders/${encodeURIComponent(folderId)}/activate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ admin_pin: adminPin })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            activeFolderId = folderId;
+            window.soundManager.playCorrect();
+            loadFolders();
+            loadQuestions();
+        } else {
+            alert(data.detail || "Klasör aktif edilemedi!");
+        }
+    } catch(e) {
+        alert("Bağlantı hatası!");
+    }
+}
+
+async function deleteFolder(folderId) {
+    if (!adminPin) return;
+    if (!confirm("Bu klasörü ve içindeki soruları silmek istediğinize emin misiniz?")) return;
+    try {
+        const res = await fetch(`/api/admin/folders/${encodeURIComponent(folderId)}?admin_pin=${encodeURIComponent(adminPin)}`, {
+            method: "DELETE"
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            window.soundManager.playClick();
+            if (activeFolderId === folderId) activeFolderId = "default";
+            loadFolders();
+            loadQuestions();
+        } else {
+            alert(data.detail || "Klasör silinemedi!");
+        }
+    } catch(e) {
+        alert("Bağlantı hatası!");
+    }
+}
+
+// Modal 4: Yeni Klasör Oluştur
+function openCreateFolderModal() {
+    document.getElementById("modal-create-folder").classList.remove("hidden");
+    window.soundManager.playClick();
+}
+
+function closeCreateFolderModal() {
+    document.getElementById("modal-create-folder").classList.add("hidden");
+    window.soundManager.playClick();
+}
+
+async function handleCreateFolderSubmit(e) {
+    e.preventDefault();
     if (!adminPin) {
         checkAdminAuth();
         return;
     }
 
-    const btn = document.getElementById("btn-generate-ai");
+    const title = document.getElementById("folder-title").value.trim();
+    const desc = document.getElementById("folder-desc").value.trim();
+    const btn = document.getElementById("btn-submit-create-folder");
+    btn.disabled = true;
+    btn.innerText = "Oluşturuluyor...";
+
+    try {
+        const res = await fetch("/api/admin/folders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                admin_pin: adminPin,
+                name: title,
+                description: desc
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            closeCreateFolderModal();
+            document.getElementById("folder-title").value = "";
+            document.getElementById("folder-desc").value = "";
+            window.soundManager.playCorrect();
+            loadFolders();
+            alert("Yeni klasör başarıyla oluşturuldu! 📁");
+        } else {
+            alert(data.detail || "Klasör oluşturulamadı!");
+        }
+    } catch(err) {
+        alert("Bağlantı hatası!");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Klasörü Oluştur 📁";
+    }
+}
+
+// Modal 5: AI Soru Üretici (Requirement 8 & 9)
+function openAiGeneratorModal() {
+    document.getElementById("modal-ai-generator").classList.remove("hidden");
+    loadFolders(); // Ensure folder list is fresh
+    window.soundManager.playClick();
+}
+
+function closeAiGeneratorModal() {
+    document.getElementById("modal-ai-generator").classList.add("hidden");
+    window.soundManager.playClick();
+}
+
+function distributeDifficultiesAutomatically(val) {
+    const total = parseInt(val) || 0;
+    if (total <= 0) return;
+    const cokKolay = Math.max(1, Math.round(total * 0.15));
+    const kolay = Math.round(total * 0.35);
+    const orta = Math.round(total * 0.35);
+    const zor = Math.max(1, total - (cokKolay + kolay + orta));
+
+    const elCK = document.getElementById("diff-cok-kolay");
+    const elK = document.getElementById("diff-kolay");
+    const elO = document.getElementById("diff-orta");
+    const elZ = document.getElementById("diff-zor");
+
+    if (elCK) elCK.value = cokKolay;
+    if (elK) elK.value = kolay;
+    if (elO) elO.value = orta;
+    if (elZ) elZ.value = zor;
+}
+
+async function handleAiGenerateSubmit(e) {
+    e.preventDefault();
+    if (!adminPin) {
+        checkAdminAuth();
+        return;
+    }
+
+    const totalCount = parseInt(document.getElementById("ai-total-count").value) || 30;
+    if (totalCount < 1 || totalCount > 50) {
+        alert("Tek seferde üretilecek soru sayısı 1 ile 50 arasında olmalıdır!");
+        return;
+    }
+
+    const folderSelect = document.getElementById("ai-folder-select");
+    const targetFolderId = folderSelect ? folderSelect.value : (activeFolderId || "default");
+
+    const cokKolay = parseInt(document.getElementById("diff-cok-kolay").value) || 0;
+    const kolay = parseInt(document.getElementById("diff-kolay").value) || 0;
+    const orta = parseInt(document.getElementById("diff-orta").value) || 0;
+    const zor = parseInt(document.getElementById("diff-zor").value) || 0;
+
+    const btn = document.getElementById("btn-submit-ai-generator");
     const notice = document.getElementById("ai-status-notice");
     btn.disabled = true;
-    btn.innerHTML = `<span class="animate-spin inline-block mr-2">🔄</span> 30 Soru Üretiliyor...`;
+    btn.innerHTML = `<span class="animate-spin inline-block mr-2">🔄</span> Gemini AI ile Sorular Üretiliyor...`;
 
     notice.className = "p-3 rounded-xl text-xs font-bold mb-4 bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 block";
-    notice.innerText = "Gemini AI modeli ile 30 özgün yapay zeka ve girişimcilik sorusu üretiliyor, lütfen bekleyiniz...";
+    notice.innerText = `Gemini AI ile ${totalCount} özgün soru üretiliyor (Zorluk Dağılımlı: ${cokKolay} Çok Kolay, ${kolay} Kolay, ${orta} Orta, ${zor} Zor)...`;
 
     try {
         const res = await fetch("/api/admin/generate-questions", {
@@ -406,30 +635,44 @@ async function generateAiQuestions() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 admin_pin: adminPin,
-                count: 30
+                count: totalCount,
+                folder_id: targetFolderId,
+                difficulties: {
+                    cok_kolay: cokKolay,
+                    kolay: kolay,
+                    orta: orta,
+                    zor: zor
+                }
             })
         });
+
         const data = await res.json();
         if (res.ok && data.success) {
+            closeAiGeneratorModal();
             notice.className = "p-3 rounded-xl text-xs font-bold mb-4 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 block";
-            notice.innerText = `Harika! Gemini API ile ${data.count} yeni soru başarıyla üretildi ve yarışmaya yüklendi.`;
+            notice.innerText = `Harika! Gemini AI ile ${data.count} yeni soru başarıyla üretildi ve "${data.folder_name || 'Klasöre'}" yüklendi. (Toplam soru: ${data.total_questions}/60)`;
             window.soundManager.playCorrect();
+            activeFolderId = targetFolderId;
+            loadFolders();
             loadQuestions();
+            alert(`Gemini AI ile ${data.count} soru üretildi ve başarıyla yüklendi! ✨`);
         } else {
             notice.className = "p-3 rounded-xl text-xs font-bold mb-4 bg-rose-500/10 text-rose-400 border border-rose-500/30 block";
             notice.innerText = "Soru üretilemedi: " + (data.detail || "Bilinmeyen hata");
+            alert(data.detail || "Soru üretilemedi!");
         }
     } catch(err) {
         notice.className = "p-3 rounded-xl text-xs font-bold mb-4 bg-rose-500/10 text-rose-400 border border-rose-500/30 block";
         notice.innerText = "Soru üretimi sırasında ağ hatası oluştu.";
+        alert("Soru üretimi sırasında bağlantı hatası oluştu.");
     } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i data-lucide="bot" class="w-4 h-4 mr-1 inline"></i> 30 Yeni Soru Üret (Gemini API)`;
+        btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 mr-1 inline"></i> Soruları Üret ve Klasöre Yükle ✨`;
         lucide.createIcons();
     }
 }
 
-// Load Questions Table with Delete Button
+// Load Questions Table with Folder & Difficulty Badges
 async function loadQuestions() {
     if (!adminPin) return;
     try {
@@ -437,24 +680,51 @@ async function loadQuestions() {
         const data = await res.json();
         if (res.ok && data.questions) {
             const tbody = document.getElementById("questions-table-body");
+            const titleEl = document.getElementById("active-folder-table-title");
+            const countEl = document.getElementById("active-folder-questions-count");
+
             if (!tbody) return;
-            if (data.questions.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 font-semibold">Henüz soru eklenmedi. Manuel ekleyebilir veya Gemini ile üretebilirsiniz.</td></tr>`;
+
+            // Filter questions by activeFolderId if set, or show all
+            let filtered = data.questions;
+            if (activeFolderId) {
+                const folderMatch = cachedFolders.find(f => f.id === activeFolderId);
+                if (folderMatch && titleEl) {
+                    titleEl.innerText = `${folderMatch.name} Soruları`;
+                }
+                const inFolder = data.questions.filter(q => q.folder_id === activeFolderId);
+                if (inFolder.length > 0 || cachedFolders.length > 1) {
+                    filtered = inFolder;
+                }
+            }
+
+            if (countEl) {
+                countEl.innerText = `${filtered.length} / ${data.total_questions || data.questions.length} Soru (Maks 60)`;
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500 font-semibold">Bu klasörde henüz soru bulunmuyor. Manuel ekleyebilir veya AI Soru Üretici ile üretebilirsiniz.</td></tr>`;
                 return;
             }
-            tbody.innerHTML = data.questions.map((q, idx) => `
+
+            tbody.innerHTML = filtered.map((q, idx) => `
                 <tr class="hover:bg-slate-800/50 transition-colors">
-                    <td class="p-3 font-mono font-bold text-slate-500">${idx + 1}</td>
-                    <td class="p-3 font-semibold text-white max-w-sm truncate" title="${escapeHtml(q.question)}">
+                    <td class="p-3.5 font-mono font-bold text-slate-500">${idx + 1}</td>
+                    <td class="p-3.5 font-semibold text-white max-w-sm truncate" title="${escapeHtml(q.question)}">
                         ${escapeHtml(q.question)}
                     </td>
-                    <td class="p-3">
-                        <span class="px-2 py-0.5 rounded-md font-mono font-black text-xs ${getCorrectBadgeClass(q.correct)}">
+                    <td class="p-3.5">
+                        <span class="px-2 py-0.5 rounded-md text-[11px] font-black ${getDifficultyBadgeClass(q.difficulty)}">
+                            ${escapeHtml(q.difficulty || 'Orta')}
+                        </span>
+                    </td>
+                    <td class="p-3.5">
+                        <span class="px-2.5 py-1 rounded-lg font-mono font-black text-xs ${getCorrectBadgeClass(q.correct)}">
                             ${q.correct}
                         </span>
                     </td>
-                    <td class="p-3 font-mono text-slate-400">${q.duration || 15}s</td>
-                    <td class="p-3 text-right">
+                    <td class="p-3.5 font-mono text-slate-400 font-bold">${q.duration || 15}s</td>
+                    <td class="p-3.5 text-right">
                         <button onclick="deleteQuestion('${q.id}')" class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-all" title="Soruyu Sil">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
@@ -466,11 +736,20 @@ async function loadQuestions() {
     } catch(e) {}
 }
 
+function getDifficultyBadgeClass(diff) {
+    if (diff === "Çok Kolay") return "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+    if (diff === "Kolay") return "bg-blue-500/20 text-blue-400 border border-blue-500/30";
+    if (diff === "Zor") return "bg-rose-500/20 text-rose-400 border border-rose-500/30";
+    return "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30";
+}
+
 function getCorrectBadgeClass(opt) {
     if (opt === "A") return "bg-red-500/20 text-red-400 border border-red-500/30";
     if (opt === "B") return "bg-blue-500/20 text-blue-400 border border-blue-500/30";
     if (opt === "C") return "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30";
     if (opt === "D") return "bg-green-500/20 text-green-400 border border-green-500/30";
+    return "bg-slate-800 text-slate-300";
+}
     return "bg-slate-800 text-slate-300";
 }
 
@@ -544,7 +823,7 @@ async function unbanUser(identifier) {
     }
 }
 
-// Refresh Live Participants in Admin Dashboard
+// Refresh Live Participants in Admin Dashboard with Manual Score Adjustments (Requirement 7)
 async function refreshAdminPlayers() {
     try {
         const res = await fetch("/api/leaderboard?limit=50");
@@ -558,20 +837,75 @@ async function refreshAdminPlayers() {
         }
 
         container.innerHTML = players.map(p => `
-            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                <div class="flex items-center space-x-2.5">
-                    <span class="text-xl">${p.avatar || '🚀'}</span>
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs hover:border-slate-700 transition-all">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">${p.avatar || '🚀'}</span>
                     <div>
-                        <span class="font-bold text-white block">${escapeHtml(p.name)}</span>
-                        <span class="text-[10px] text-slate-400">${escapeHtml(p.school || 'Diğer')}</span>
+                        <span class="font-extrabold text-white text-sm block">${escapeHtml(p.name)}</span>
+                        <span class="text-[11px] text-slate-400">${escapeHtml(p.school || 'Diğer')}</span>
                     </div>
                 </div>
-                <div class="text-right">
-                    <span class="font-mono font-bold text-indigo-400">${p.score} Puan</span>
+                <div class="flex items-center space-x-3">
+                    <div class="text-right">
+                        <span class="font-mono font-black text-sm text-indigo-400 block">${p.score}</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase">Puan</span>
+                    </div>
+                    <!-- Score Action Buttons (+100, -100, Custom) -->
+                    <div class="flex items-center space-x-1 pl-2 border-l border-slate-800">
+                        <button onclick="adjustPlayerScore('${p.id}', 100)" class="w-7 h-7 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 font-black text-xs transition-all active:scale-95 flex items-center justify-center" title="+100 Puan Ekle">
+                            +
+                        </button>
+                        <button onclick="adjustPlayerScore('${p.id}', -100)" class="w-7 h-7 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 font-black text-xs transition-all active:scale-95 flex items-center justify-center" title="-100 Puan Sil">
+                            -
+                        </button>
+                        <button onclick="promptCustomScore('${p.id}', '${escapeHtml(p.name)}')" class="px-2 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[11px] transition-all flex items-center justify-center" title="Özel Puan Gir">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `).join("");
+        lucide.createIcons();
     } catch(e) {}
+}
+
+async function adjustPlayerScore(playerId, delta) {
+    if (!adminPin) {
+        checkAdminAuth();
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/admin/players/score", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                admin_pin: adminPin,
+                player_id: playerId,
+                score_delta: delta
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            window.soundManager.playCorrect();
+            refreshAdminPlayers();
+        } else {
+            alert(data.detail || "Puan güncellenemedi!");
+        }
+    } catch(e) {
+        alert("Bağlantı hatası!");
+    }
+}
+
+function promptCustomScore(playerId, playerName) {
+    const input = prompt(`${playerName} yarışmacısına eklenecek veya çıkarılacak puanı giriniz (Örn: +250 veya -150):`);
+    if (input === null) return;
+    const delta = parseInt(input.trim());
+    if (isNaN(delta) || delta === 0) {
+        alert("Lütfen geçerli bir sayı giriniz (0 hariç)!");
+        return;
+    }
+    adjustPlayerScore(playerId, delta);
 }
 
 function escapeHtml(str) {

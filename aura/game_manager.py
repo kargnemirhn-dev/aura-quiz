@@ -4,11 +4,14 @@ import random
 import logging
 from typing import Dict, List, Optional, Any
 from aura.config import settings
-from aura.models import Question, Player, GameState
+from aura.models import Question, Player, GameState, QuizFolder
 from aura.gemini_service import gemini_service
 from aura.firebase_service import sync_game_state_to_firestore, sync_player_to_firestore
 
 logger = logging.getLogger("aura.game")
+
+MAX_TOTAL_QUESTIONS = 60 # System-wide max total quiz questions (Requirement 9)
+MAX_GENERATE_QUESTIONS = 50 # Single AI generation limit (Requirement 9)
 
 def generate_random_6digit_pin() -> str:
     return str(random.randint(100000, 999999))
@@ -33,6 +36,17 @@ class GameManager:
         self._auto_task: Optional[asyncio.Task] = None
         self._subscribers: List[asyncio.Queue] = []
         self._lock = asyncio.Lock()
+
+        # Folders Architecture (Requirement 8)
+        self.active_folder_id: str = "default"
+        default_folder = QuizFolder(
+            id="default",
+            title="AI Era Zirvesi - Genel Soru Seti",
+            description="Zirve sahnesi için hazırlanan temel yapay zeka ve girişimcilik soruları",
+            created_at=time.time(),
+            questions=list(self.questions)
+        )
+        self.folders: Dict[str, QuizFolder] = {"default": default_folder}
 
     def get_current_question(self) -> Optional[Question]:
         if 0 <= self.current_question_index < len(self.questions):
@@ -77,8 +91,39 @@ class GameManager:
             "answers_count": answers_count,
             "answer_stats": self.answer_stats,
             "last_reaction": self.last_reaction,
+            "active_folder_id": self.active_folder_id,
+            "folders_count": len(self.folders),
             "updated_at": time.time()
         }
+
+    def get_player_rank(self, player_id: str) -> Optional[Dict[str, Any]]:
+        sorted_players = sorted(
+            self.players.values(),
+            key=lambda p: (p.score, -p.joined_at),
+            reverse=True
+        )
+        total = len(sorted_players)
+        for idx, p in enumerate(sorted_players):
+            if p.id == player_id:
+                return {
+                    "player_id": player_id,
+                    "name": p.name,
+                    "avatar": p.avatar,
+                    "score": p.score,
+                    "streak": p.streak,
+                    "rank": idx + 1,
+                    "total_players": total
+                }
+        return None
+
+    async def adjust_player_score(self, player_id: str, delta: int) -> Optional[Player]:
+        async with self._lock:
+            player = self.players.get(player_id)
+            if not player:
+                return None
+            player.score = max(0, player.score + delta)
+            await self.broadcast_state()
+            return player
 
     def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
         sorted_players = sorted(
@@ -159,9 +204,14 @@ class GameManager:
             await self.broadcast_state()
             return self.room_pin
 
-    async def set_questions(self, questions: List[Question]):
+    async def set_questions(self, questions: List[Question], folder_id: Optional[str] = None):
         async with self._lock:
-            self.questions = questions
+            target_folder = folder_id or self.active_folder_id
+            if len(questions) > MAX_TOTAL_QUESTIONS:
+                raise ValueError(f"Sistemde toplam soru sınırı maksimum {MAX_TOTAL_QUESTIONS} sorudur!")
+            self.questions = questions[:MAX_TOTAL_QUESTIONS]
+            if target_folder in self.folders:
+                self.folders[target_folder].questions = list(self.questions)
             self.current_question_index = 0
             self.status = "LOBBY"
             self._reset_answers()
@@ -169,8 +219,13 @@ class GameManager:
 
     async def add_manual_question(self, question: Question) -> Question:
         async with self._lock:
+            if len(self.questions) >= MAX_TOTAL_QUESTIONS:
+                raise ValueError(f"Sistemde toplam soru sınırı maksimum {MAX_TOTAL_QUESTIONS} sorudur!")
             question.id = len(self.questions) + 1
             self.questions.append(question)
+            f_id = question.folder_id or self.active_folder_id
+            if f_id in self.folders:
+                self.folders[f_id].questions.append(question)
             await self.broadcast_state()
             return question
 
@@ -180,10 +235,66 @@ class GameManager:
             self.questions = [q for q in self.questions if q.id != question_id]
             for idx, q in enumerate(self.questions, start=1):
                 q.id = idx
+            if self.active_folder_id in self.folders:
+                self.folders[self.active_folder_id].questions = list(self.questions)
             if len(self.questions) < initial_len:
                 await self.broadcast_state()
                 return True
             return False
+
+    async def create_folder(self, title: str, description: str = "") -> QuizFolder:
+        async with self._lock:
+            import uuid
+            f_id = f"folder-{str(uuid.uuid4())[:8]}"
+            folder = QuizFolder(
+                id=f_id,
+                title=title.strip(),
+                description=description.strip(),
+                created_at=time.time(),
+                questions=[]
+            )
+            self.folders[f_id] = folder
+            await self.broadcast_state()
+            return folder
+
+    async def delete_folder(self, folder_id: str) -> bool:
+        async with self._lock:
+            if folder_id == "default":
+                return False
+            if folder_id in self.folders:
+                del self.folders[folder_id]
+                if self.active_folder_id == folder_id:
+                    self.active_folder_id = "default"
+                    self.questions = list(self.folders["default"].questions)
+                await self.broadcast_state()
+                return True
+            return False
+
+    async def activate_folder(self, folder_id: str) -> bool:
+        async with self._lock:
+            if folder_id in self.folders:
+                self.active_folder_id = folder_id
+                self.questions = list(self.folders[folder_id].questions)
+                self.current_question_index = 0
+                self.status = "LOBBY"
+                self._reset_answers()
+                await self.broadcast_state()
+                return True
+            return False
+
+    def get_folders_list(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "id": f.id,
+                "title": f.title,
+                "description": f.description,
+                "created_at": f.created_at,
+                "questions_count": len(f.questions),
+                "is_active": (f.id == self.active_folder_id),
+                "questions": [q.model_dump() for q in f.questions]
+            }
+            for f in self.folders.values()
+        ]
 
     async def post_reaction(self, emoji: str, sender: str = "İzleyici") -> Dict[str, Any]:
         async with self._lock:
