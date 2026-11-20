@@ -1,7 +1,7 @@
 import json
 import asyncio
-from typing import Dict, Any
-from fastapi import APIRouter, Request, HTTPException, Depends
+from typing import Dict, Any, List
+from fastapi import APIRouter, Request, HTTPException, Depends, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
@@ -12,11 +12,18 @@ from aura.models import (
     AdminActionRequest,
     AnswerSubmission,
     AdminPinChangeRequest,
-    StageAuthRequest
+    StageAuthRequest,
+    ManualQuestionCreate,
+    EmojiReaction,
+    UnbanRequest,
+    Question,
+    QuestionOption
 )
 from aura.game_manager import game_manager
 from aura.gemini_service import gemini_service
 from aura.firebase_service import get_firebase_web_config
+from aura.security import security_service
+from aura.export_service import generate_excel_report, generate_pdf_report
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -137,19 +144,29 @@ async def get_fb_config():
     return get_firebase_web_config()
 
 # --- Player API Routes ---
+@router.post("/api/reaction")
+async def post_reaction(payload: EmojiReaction):
+    res = await game_manager.post_reaction(payload.emoji, payload.sender or "İzleyici")
+    return {"success": True, "reaction": res}
+
 @router.post("/api/player/join")
 async def player_join(payload: Dict[str, Any]):
     pin = str(payload.get("room_pin", "")).strip()
     name = str(payload.get("name", "")).strip()
-    school = str(payload.get("school", "Bağımsız")).strip()
-    avatar = str(payload.get("avatar", "🚀")).strip()
+    school = str(payload.get("school", "Halil İnalcık Anadolu Lisesi")).strip()
+    avatar = str(payload.get("avatar", "🐼")).strip()
     player_id = str(payload.get("player_id", "")).strip()
+    client_id = str(payload.get("client_id", player_id or name)).strip()
 
     if not pin or pin != game_manager.room_pin:
         raise HTTPException(status_code=400, detail="Geçersiz veya hatalı Oda PIN kodu!")
 
-    if not name:
-        raise HTTPException(status_code=400, detail="Lütfen bir isim giriniz!")
+    # Güvenlik & Doğrulama: Harf Kuralı ve Argo/Siyasi İsim Filtresi (3 Hak Ban Kuralı)
+    identifier = client_id or player_id or name
+    is_valid, error_msg, meta = security_service.validate_name(name, identifier)
+    if not is_valid:
+        status_code = 403 if meta.get("banned") else 400
+        raise HTTPException(status_code=status_code, detail=error_msg)
 
     if not player_id:
         import uuid
@@ -215,10 +232,78 @@ async def admin_update_pin(payload: PinUpdateRequest):
 @router.post("/api/admin/timer")
 async def admin_set_timer(payload: TimerSettingRequest):
     verify_admin_pin(payload.admin_pin)
-    if payload.duration not in (5, 10, 15):
-        raise HTTPException(status_code=400, detail="Süre sadece 5, 10 veya 15 saniye olabilir.")
-    await game_manager.set_timer_settings(payload.duration, payload.auto_mode)
-    return {"success": True, "duration": payload.duration, "auto_mode": payload.auto_mode}
+    q_dur = payload.question_duration or payload.duration or 15
+    t_delay = payload.transition_delay or 5
+    await game_manager.set_timer_settings(
+        question_duration=q_dur,
+        transition_delay=t_delay,
+        auto_mode=payload.auto_mode
+    )
+    return {
+        "success": True,
+        "question_duration": game_manager.duration,
+        "transition_delay": game_manager.transition_delay,
+        "auto_mode": game_manager.auto_mode
+    }
+
+# --- Export Raporları (Excel & PDF) ---
+@router.get("/api/admin/export/excel")
+async def export_excel(admin_pin: str = ""):
+    verify_admin_pin(admin_pin)
+    players = game_manager.get_leaderboard(limit=200)
+    data = generate_excel_report(players)
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=AI_ERA_Zirvesi_Sonuclar.xlsx"}
+    )
+
+@router.get("/api/admin/export/pdf")
+async def export_pdf(admin_pin: str = ""):
+    verify_admin_pin(admin_pin)
+    players = game_manager.get_leaderboard(limit=200)
+    data = generate_pdf_report(players)
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=AI_ERA_Zirvesi_Sonuc_Raporu.pdf"}
+    )
+
+# --- Quizlerim (Manuel Soru Yönetimi) ---
+@router.post("/api/admin/questions/manual")
+async def add_manual_question(payload: ManualQuestionCreate):
+    verify_admin_pin(payload.admin_pin)
+    new_q = Question(
+        id=len(game_manager.questions) + 1,
+        question=payload.question.strip(),
+        options=payload.options,
+        correct=payload.correct,
+        explanation=payload.explanation.strip(),
+        duration=payload.duration
+    )
+    added = await game_manager.add_manual_question(new_q)
+    return {"success": True, "question": added.model_dump(), "total": len(game_manager.questions)}
+
+@router.delete("/api/admin/questions/{q_id}")
+async def delete_question(q_id: int, admin_pin: str = ""):
+    verify_admin_pin(admin_pin)
+    success = await game_manager.delete_question(q_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Soru bulunamadı")
+    return {"success": True, "total": len(game_manager.questions)}
+
+# --- Ban Yönetimi ---
+@router.get("/api/admin/banned")
+async def get_banned_users(admin_pin: str = ""):
+    verify_admin_pin(admin_pin)
+    return {"banned_users": security_service.get_banned_list()}
+
+@router.post("/api/admin/unban")
+async def unban_user(payload: UnbanRequest):
+    verify_admin_pin(payload.admin_pin)
+    target_id = payload.get_target_id()
+    res = security_service.unban_user(target_id)
+    return {"success": res, "message": f"{target_id} kullanıcısının banı kaldırıldı"}
 
 @router.post("/api/admin/generate-questions")
 async def admin_generate_questions(payload: Dict[str, Any]):

@@ -47,8 +47,31 @@ class StageAuthRequest(BaseModel):
 
 class TimerSettingRequest(BaseModel):
     admin_pin: str
-    duration: int # 5, 10, or 15 seconds
+    duration: Optional[int] = None # legacy compatibility
+    question_duration: Optional[int] = 15 # 5, 10, 15, 20, 30s
+    transition_delay: Optional[int] = 5 # 3, 5, 10s
     auto_mode: bool = False
+
+class ManualQuestionCreate(BaseModel):
+    admin_pin: str
+    question: str
+    options: QuestionOption
+    correct: Literal["A", "B", "C", "D"]
+    explanation: Optional[str] = ""
+    duration: int = 15
+
+class EmojiReaction(BaseModel):
+    emoji: str
+    sender: Optional[str] = "İzleyici"
+    room_pin: Optional[str] = ""
+
+class UnbanRequest(BaseModel):
+    admin_pin: str
+    user_id: Optional[str] = None
+    identifier: Optional[str] = None
+
+    def get_target_id(self) -> str:
+        return self.user_id or self.identifier or ""
 
 class AdminActionRequest(BaseModel):
     admin_pin: str
@@ -70,11 +93,14 @@ class GameState(BaseModel):
     current_question_index: int = 0
     total_questions: int = 30
     auto_mode: bool = False
-    duration: int = 15 # 5, 10, 15
+    duration: int = 15 # Question duration
+    transition_delay: int = 5 # Auto transition duration on leaderboard
     timer_remaining: int = 15
+    leaderboard_countdown: int = 5
     question_start_timestamp: float = 0
     current_question: Optional[Dict] = None # Will redact correct answer when sent to stage/players during QUESTION status
     participants_count: int = 0
     answers_count: int = 0
     answer_stats: Dict[str, int] = Field(default_factory=lambda: {"A": 0, "B": 0, "C": 0, "D": 0})
+    last_reaction: Optional[Dict] = None
     updated_at: float = Field(default_factory=time.time)

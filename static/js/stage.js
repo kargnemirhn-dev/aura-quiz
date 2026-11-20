@@ -3,7 +3,7 @@ let currentRoomPin = document.getElementById("stage-pin-display").innerText.trim
 let lastStatus = "LOBBY";
 let qrLobbyInstance = null;
 let qrModalInstance = null;
-let knownParticipants = [];
+let lastReactionTimestamp = 0;
 
 // Stage Security / PIN Authentication
 function checkStageAuth() {
@@ -55,32 +55,41 @@ function lockStage() {
 // Initialize QR codes
 function updateQrCodes(pin) {
     currentRoomPin = pin;
-    document.getElementById("stage-pin-display").innerText = pin;
-    document.getElementById("modal-pin-display").innerText = pin;
+    const pinDisplay = document.getElementById("stage-pin-display");
+    const lobbyPinDisplay = document.getElementById("lobby-pin-display");
+    const modalPinDisplay = document.getElementById("modal-pin-display");
+
+    if (pinDisplay) pinDisplay.innerText = pin;
+    if (lobbyPinDisplay) lobbyPinDisplay.innerText = pin;
+    if (modalPinDisplay) modalPinDisplay.innerText = pin;
 
     const playUrl = `${window.location.origin}/play?pin=${encodeURIComponent(pin)}`;
 
     const lobbyEl = document.getElementById("lobby-qrcode");
-    lobbyEl.innerHTML = "";
-    qrLobbyInstance = new QRCode(lobbyEl, {
-        text: playUrl,
-        width: 220,
-        height: 220,
-        colorDark: "#020617",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.M
-    });
+    if (lobbyEl) {
+        lobbyEl.innerHTML = "";
+        qrLobbyInstance = new QRCode(lobbyEl, {
+            text: playUrl,
+            width: 200,
+            height: 200,
+            colorDark: "#020617",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    }
 
     const modalEl = document.getElementById("modal-qrcode-target");
-    modalEl.innerHTML = "";
-    qrModalInstance = new QRCode(modalEl, {
-        text: playUrl,
-        width: 320,
-        height: 320,
-        colorDark: "#020617",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
+    if (modalEl) {
+        modalEl.innerHTML = "";
+        qrModalInstance = new QRCode(modalEl, {
+            text: playUrl,
+            width: 300,
+            height: 300,
+            colorDark: "#020617",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
 }
 
 function openQrModal() {
@@ -105,33 +114,66 @@ function toggleFullscreen() {
     }
 }
 
-// Render dynamic Marquee Participants
-function renderMarquee(players) {
-    const marquee = document.getElementById("participants-marquee");
-    const statusText = document.getElementById("marquee-status");
+// Render Unique Participants List (Requirement 6: Strictly 1 card per player)
+function renderParticipantsList(players) {
+    const container = document.getElementById("lobby-participants-container");
+    const countBadge = document.getElementById("lobby-players-count-badge");
+    const stageCount = document.getElementById("stage-players-count");
+
+    if (!container) return;
+
+    const count = (players && players.length) || 0;
+    if (countBadge) countBadge.innerText = `${count} Katılımcı`;
+    if (stageCount) stageCount.innerText = count;
+
     if (!players || players.length === 0) {
-        marquee.innerHTML = `
-            <div class="inline-flex items-center space-x-3 bg-slate-800/80 border border-slate-700/80 px-4 py-2 rounded-xl text-slate-400 text-sm">
-                <span>🚀 Katılımcı kartları burada akacak</span>
+        container.innerHTML = `
+            <div id="empty-participants-notice" class="flex flex-col items-center justify-center h-48 text-center text-slate-500">
+                <i data-lucide="user-plus" class="w-10 h-10 mb-2 opacity-40"></i>
+                <span class="text-sm font-semibold">İlk yarışmacının odaya bağlanması bekleniyor...</span>
             </div>
         `;
-        statusText.innerText = "Katılımcılar bekleniyor...";
+        lucide.createIcons();
         return;
     }
 
-    statusText.innerText = `${players.length} yarışmacı hazır`;
-
-    // Duplicate players array to ensure seamless infinite horizontal scroll
-    const items = [...players, ...players];
-    marquee.innerHTML = items.map(p => `
-        <div class="inline-flex items-center space-x-3 bg-slate-800/90 border border-slate-700/90 hover:border-indigo-500 px-5 py-2.5 rounded-2xl text-white shadow-md flex-shrink-0">
-            <span class="text-2xl">${p.avatar || '🚀'}</span>
-            <div class="flex flex-col text-left">
-                <span class="font-bold text-sm leading-tight text-white">${escapeHtml(p.name)}</span>
-                <span class="text-xs text-indigo-400 font-medium">${escapeHtml(p.school || 'Bağımsız')}</span>
+    // Strictly unique items (No duplicate arrays)
+    container.innerHTML = players.map(p => `
+        <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-indigo-500/50 transition-all shadow-md group">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-2xl sm:text-3xl group-hover:scale-110 transition-transform">
+                    ${p.avatar || '🚀'}
+                </div>
+                <div class="flex flex-col text-left">
+                    <span class="font-extrabold text-sm sm:text-base text-white leading-tight">${escapeHtml(p.name)}</span>
+                    <span class="text-xs text-indigo-400 font-medium">${escapeHtml(p.school || 'Diğer')}</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+                    Hazır
+                </span>
             </div>
         </div>
     `).join("");
+}
+
+// Live Reaction Floating Emoji Animation (Requirement 2)
+function spawnReaction(emoji, senderName) {
+    const container = document.getElementById("stage-reactions");
+    if (!container) return;
+
+    const bubble = document.createElement("div");
+    bubble.className = "reaction-bubble";
+    const randomLeft = Math.floor(Math.random() * 80) + 10; // 10% to 90%
+    bubble.style.left = `${randomLeft}%`;
+    bubble.innerHTML = `<span class="text-4xl filter drop-shadow-xl select-none">${emoji}</span>`;
+    container.appendChild(bubble);
+
+    setTimeout(() => {
+        bubble.remove();
+    }, 3200);
 }
 
 function escapeHtml(str) {
@@ -148,7 +190,14 @@ function applyState(state) {
         updateQrCodes(state.room_pin);
     }
 
-    document.getElementById("stage-players-count").innerText = state.participants_count || 0;
+    // Check for incoming live reactions
+    if (state.last_reaction && state.last_reaction.timestamp > lastReactionTimestamp) {
+        lastReactionTimestamp = state.last_reaction.timestamp;
+        spawnReaction(state.last_reaction.emoji, state.last_reaction.player_name);
+    }
+
+    const stageCount = document.getElementById("stage-players-count");
+    if (stageCount) stageCount.innerText = state.participants_count || 0;
 
     const views = {
         LOBBY: document.getElementById("view-lobby"),
@@ -162,17 +211,19 @@ function applyState(state) {
 
     // Hide all, show target
     Object.keys(views).forEach(key => {
-        if (key === newStatus) {
-            views[key].classList.remove("hidden");
-        } else {
-            views[key].classList.add("hidden");
+        if (views[key]) {
+            if (key === newStatus) {
+                views[key].classList.remove("hidden");
+            } else {
+                views[key].classList.add("hidden");
+            }
         }
     });
 
     if (newStatus === "LOBBY") {
         fetch("/api/leaderboard?limit=50")
             .then(res => res.json())
-            .then(data => renderMarquee(data))
+            .then(data => renderParticipantsList(data))
             .catch(() => {});
     } else if (newStatus === "QUESTION") {
         const q = state.current_question;
@@ -248,20 +299,20 @@ function applyState(state) {
             .then(players => {
                 const list = document.getElementById("leaderboard-list");
                 list.innerHTML = players.map(p => `
-                    <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 hover:border-indigo-500/50 p-4 sm:p-5 rounded-2xl shadow-lg transition-all">
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-lg">
                         <div class="flex items-center space-x-4">
-                            <span class="w-10 h-10 rounded-xl bg-slate-800 text-slate-300 font-black flex items-center justify-center text-lg">
-                                #${p.rank}
+                            <span class="font-mono text-xl font-black w-8 text-center ${p.rank === 1 ? 'text-amber-400' : p.rank === 2 ? 'text-slate-300' : p.rank === 3 ? 'text-amber-600' : 'text-slate-500'}">
+                                ${p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : '#' + p.rank}
                             </span>
-                            <span class="text-3xl">${p.avatar}</span>
+                            <span class="text-3xl">${p.avatar || '🚀'}</span>
                             <div class="flex flex-col text-left">
-                                <span class="font-extrabold text-white text-base sm:text-lg">${escapeHtml(p.name)}</span>
-                                <span class="text-xs text-slate-400 font-semibold">${escapeHtml(p.school)}</span>
+                                <span class="font-extrabold text-white text-base">${escapeHtml(p.name)}</span>
+                                <span class="text-xs text-indigo-400 font-semibold">${escapeHtml(p.school || 'Diğer')}</span>
                             </div>
                         </div>
-                        <div class="flex items-center space-x-4">
-                            ${p.streak > 1 ? `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold">🔥 ${p.streak} Seri</span>` : ''}
-                            <span class="text-xl sm:text-2xl font-black text-indigo-400">${p.score} P</span>
+                        <div class="text-right">
+                            <span class="font-mono text-xl font-black text-amber-400">${p.score}</span>
+                            <span class="text-xs text-slate-400 font-bold block">Puan</span>
                         </div>
                     </div>
                 `).join("");
@@ -270,30 +321,41 @@ function applyState(state) {
 
     } else if (newStatus === "PODIUM") {
         if (lastStatus !== "PODIUM") {
-            window.soundManager.playPodiumFanfare();
-            triggerConfetti();
+            window.soundManager.playCorrect();
+            // Confetti celebration
+            if (typeof confetti === "function") {
+                confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
         }
-        fetch("/api/podium")
+
+        fetch("/api/leaderboard?limit=3")
             .then(res => res.json())
-            .then(podium => {
-                if (podium.first) {
-                    document.getElementById("podium-1-avatar").innerText = podium.first.avatar || "🏆";
-                    document.getElementById("podium-1-name").innerText = podium.first.name || "Şampiyon";
-                    document.getElementById("podium-1-school").innerText = podium.first.school || "";
-                    document.getElementById("podium-1-score").innerText = `${podium.first.score} Puan`;
-                }
-                if (podium.second) {
-                    document.getElementById("podium-2-avatar").innerText = podium.second.avatar || "🥈";
-                    document.getElementById("podium-2-name").innerText = podium.second.name || "2. Yarışmacı";
-                    document.getElementById("podium-2-school").innerText = podium.second.school || "";
-                    document.getElementById("podium-2-score").innerText = `${podium.second.score} Puan`;
-                }
-                if (podium.third) {
-                    document.getElementById("podium-3-avatar").innerText = podium.third.avatar || "🥉";
-                    document.getElementById("podium-3-name").innerText = podium.third.name || "3. Yarışmacı";
-                    document.getElementById("podium-3-school").innerText = podium.third.school || "";
-                    document.getElementById("podium-3-score").innerText = `${podium.third.score} Puan`;
-                }
+            .then(top3 => {
+                const p1 = top3[0] || { name: "Şampiyon", school: "Kurum", score: 0, avatar: "🏆" };
+                const p2 = top3[1] || { name: "2. Yarışmacı", school: "Kurum", score: 0, avatar: "🥈" };
+                const p3 = top3[2] || { name: "3. Yarışmacı", school: "Kurum", score: 0, avatar: "🥉" };
+
+                // 1st
+                document.getElementById("podium-1-avatar").innerText = p1.avatar || "🏆";
+                document.getElementById("podium-1-name").innerText = p1.name;
+                document.getElementById("podium-1-school").innerText = p1.school;
+                document.getElementById("podium-1-score").innerText = `${p1.score} Puan`;
+
+                // 2nd
+                document.getElementById("podium-2-avatar").innerText = p2.avatar || "🥈";
+                document.getElementById("podium-2-name").innerText = p2.name;
+                document.getElementById("podium-2-school").innerText = p2.school;
+                document.getElementById("podium-2-score").innerText = `${p2.score} Puan`;
+
+                // 3rd
+                document.getElementById("podium-3-avatar").innerText = p3.avatar || "🥉";
+                document.getElementById("podium-3-name").innerText = p3.name;
+                document.getElementById("podium-3-school").innerText = p3.school;
+                document.getElementById("podium-3-score").innerText = `${p3.score} Puan`;
             })
             .catch(() => {});
     }
@@ -301,27 +363,8 @@ function applyState(state) {
     lastStatus = newStatus;
 }
 
-// Confetti Blast Animation for Grand Finale
-function triggerConfetti() {
-    if (typeof confetti !== "function") return;
-    const count = 250;
-    const defaults = { origin: { y: 0.7 } };
-
-    function fire(particleRatio, opts) {
-        confetti(Object.assign({}, defaults, opts, {
-            particleCount: Math.floor(count * particleRatio)
-        }));
-    }
-
-    fire(0.25, { spread: 26, startVelocity: 55 });
-    fire(0.2, { spread: 60 });
-    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-    fire(0.1, { spread: 120, startVelocity: 45 });
-}
-
-// Real-Time Connection Setup (SSE with Firestore client fallback)
-function initRealtime() {
+// Init Stage
+function initStage() {
     checkStageAuth();
     updateQrCodes(currentRoomPin);
 
@@ -331,7 +374,7 @@ function initRealtime() {
         .then(state => applyState(state))
         .catch(() => {});
 
-    // 1. SSE Connection
+    // SSE Stream
     const eventSource = new EventSource("/api/events");
     eventSource.onmessage = (event) => {
         try {
@@ -340,12 +383,8 @@ function initRealtime() {
         } catch(e) {}
     };
 
-    eventSource.onerror = () => {
-        console.warn("[Stage] SSE reconnecting...");
-    };
-
-    // 2. Firebase Firestore Real-Time listener (if configured)
-    if (window.firestoreDb) {
+    // Firestore listener
+    if (window.firestoreDb && currentRoomPin) {
         try {
             window.firestoreDb.collection("rooms").doc(currentRoomPin).onSnapshot((doc) => {
                 if (doc.exists) {
@@ -356,4 +395,4 @@ function initRealtime() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", initRealtime);
+document.addEventListener("DOMContentLoaded", initStage);

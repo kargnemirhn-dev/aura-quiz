@@ -3,97 +3,119 @@
 {% block title %}Sahne Ekranı | {{ title }}{% endblock %}
 
 {% block content %}
-<div class="min-h-full flex flex-col justify-between p-6 lg:p-10 max-w-[1700px] mx-auto w-full relative">
+<div class="min-h-full flex flex-col justify-between p-4 sm:p-6 lg:p-8 max-w-[1700px] mx-auto w-full relative">
     
+    <!-- Floating Reactions Animation Layer -->
+    <div id="stage-reactions" class="reaction-container pointer-events-none fixed inset-0 z-40 overflow-hidden"></div>
+
     <!-- Top Stage Bar -->
-    <header class="flex items-center justify-between bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl px-8 py-5 shadow-2xl">
+    <header class="flex items-center justify-between bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl px-6 py-4 sm:px-8 sm:py-5 shadow-2xl mb-6 flex-shrink-0">
         <div class="flex items-center space-x-4">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
                 <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
             </div>
             <div>
-                <h1 class="text-2xl font-black tracking-tight text-white">AI ERA ZİRVESİ</h1>
-                <p class="text-xs uppercase tracking-widest text-indigo-400 font-bold">Aura Canlı Bilgi Yarışması</p>
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">AI ERA: TEKNOLOJİ & GİRİŞİMCİLİK ZİRVESİ</h1>
+                <p class="text-xs uppercase tracking-widest text-indigo-400 font-bold">Aura Canlı Eşzamanlı Bilgi Yarışması</p>
             </div>
         </div>
 
         <!-- Center Room PIN & Join Info -->
-        <div class="flex items-center space-x-6">
-            <div class="flex items-center space-x-3 bg-slate-950/80 border border-indigo-500/40 px-6 py-2.5 rounded-2xl shadow-inner">
+        <div class="flex items-center space-x-4 sm:space-x-6">
+            <div class="flex items-center space-x-3 bg-slate-950/80 border border-indigo-500/40 px-5 py-2 rounded-2xl shadow-inner">
                 <span class="text-xs uppercase tracking-wider font-extrabold text-slate-400">ODA PIN:</span>
-                <span class="font-mono text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-pink-300" id="stage-pin-display">{{ room_pin }}</span>
+                <span class="font-mono text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-pink-300 tracking-wider" id="stage-pin-display">{{ room_pin }}</span>
             </div>
 
             <!-- Participant Count Badge -->
-            <div class="flex items-center space-x-2 bg-slate-950/80 border border-slate-800 px-5 py-2.5 rounded-2xl">
-                <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
-                <span class="text-lg font-black text-white" id="stage-players-count">0</span>
-                <span class="text-xs text-slate-400 font-semibold uppercase">Katılımcı</span>
+            <div class="flex items-center space-x-2 bg-slate-950/80 border border-slate-800 px-4 py-2 rounded-2xl">
+                <i data-lucide="users" class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"></i>
+                <span class="text-base sm:text-lg font-black text-white" id="stage-players-count">0</span>
+                <span class="text-xs text-slate-400 font-semibold uppercase hidden sm:inline">Katılımcı</span>
             </div>
         </div>
 
         <!-- Fullscreen, Lock & Controls -->
-        <div class="flex items-center space-x-3">
-            <button id="btn-lock-stage" onclick="lockStage()" class="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all" title="Sahneyi Kilitle">
-                <i data-lucide="lock" class="w-5 h-5"></i>
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <button id="btn-lock-stage" onclick="lockStage()" class="p-2.5 sm:p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all" title="Sahneyi Kilitle">
+                <i data-lucide="lock" class="w-4 h-4 sm:w-5 sm:h-5"></i>
             </button>
-            <button id="btn-fullscreen" onclick="toggleFullscreen()" class="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all" title="Tam Ekran">
-                <i data-lucide="maximize" class="w-5 h-5"></i>
+            <button id="btn-fullscreen" onclick="toggleFullscreen()" class="p-2.5 sm:p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all" title="Tam Ekran">
+                <i data-lucide="maximize" class="w-4 h-4 sm:w-5 sm:h-5"></i>
             </button>
         </div>
     </header>
 
     <!-- STAGE VIEWS CONTAINER -->
-    <main class="my-auto py-8 flex flex-col items-center justify-center w-full min-h-[640px]">
+    <main class="flex-1 my-auto py-4 flex flex-col items-center justify-center w-full min-h-[580px]">
         
-        <!-- 1. LOBBY VIEW -->
-        <div id="view-lobby" class="w-full max-w-5xl flex flex-col items-center text-center fade-in">
-            <div class="bg-slate-900/90 border border-slate-800 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl flex flex-col items-center w-full max-w-2xl relative overflow-hidden">
-                <div class="absolute -top-24 -left-24 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                <div class="absolute -bottom-24 -right-24 w-60 h-60 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <!-- 1. LOBBY VIEW (2-COLUMN LAYOUT: Sol QR & PIN, Sağ Tekil Profil Akışı) -->
+        <div id="view-lobby" class="w-full max-w-6xl fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
+                
+                <!-- SOL SÜTUN: QR Kod + Hemen Altında Oda PIN Kodu + Büyütme Butonu -->
+                <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 p-6 sm:p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
+                    <div class="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                <span class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-1.5 rounded-full text-sm font-bold mb-6">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Yarışma Başlamak Üzere</span>
-                </span>
+                    <span class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3.5 py-1 rounded-full text-xs font-bold mb-4">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Yarışma Başlamak Üzere</span>
+                    </span>
 
-                <h2 class="text-3xl sm:text-4xl font-black text-white mb-2">Telefonunuzla Katılın!</h2>
-                <p class="text-slate-400 text-base mb-6">QR kodu okutun veya tarayıcınızda <span class="font-bold text-white">/play</span> adresine girin.</p>
+                    <h2 class="text-2xl sm:text-3xl font-black text-white mb-1">Telefonla Katılın</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm mb-5">QR kodu okutun veya <span class="font-bold text-white">/play</span> adresine girin</p>
 
-                <!-- Interactive Clickable QR Code -->
-                <div class="relative group cursor-pointer" onclick="openQrModal()">
-                    <div id="lobby-qrcode" class="p-5 bg-white rounded-3xl shadow-2xl shadow-indigo-500/20 transition-transform group-hover:scale-105"></div>
-                    <div class="absolute inset-0 bg-indigo-900/60 backdrop-blur-sm rounded-3xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all">
-                        <i data-lucide="zoom-in" class="w-10 h-10 text-white mb-2"></i>
-                        <span class="text-xs font-black uppercase tracking-wider text-white bg-indigo-600 px-3 py-1 rounded-full">QR Kodu Büyüt</span>
+                    <!-- QR Code Frame -->
+                    <div class="relative group cursor-pointer" onclick="openQrModal()">
+                        <div id="lobby-qrcode" class="p-4 bg-white rounded-3xl shadow-2xl shadow-indigo-500/20 transition-transform group-hover:scale-105"></div>
+                        <div class="absolute inset-0 bg-indigo-900/60 backdrop-blur-sm rounded-3xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all">
+                            <i data-lucide="zoom-in" class="w-8 h-8 text-white mb-1"></i>
+                            <span class="text-[11px] font-black uppercase tracking-wider text-white bg-indigo-600 px-3 py-1 rounded-full">Büyüt</span>
+                        </div>
                     </div>
+
+                    <!-- QR Kodun Hemen Altına Yerleştirilen Oda PIN Kodu (Requirement 7) -->
+                    <div class="mt-5 w-full bg-slate-950 border border-indigo-500/40 rounded-2xl p-4 shadow-inner">
+                        <span class="text-[11px] uppercase font-extrabold tracking-widest text-slate-400 block mb-1">ODA PIN KODU</span>
+                        <span id="lobby-pin-display" class="font-mono text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-pink-300 tracking-wider">
+                            {{ room_pin }}
+                        </span>
+                    </div>
+
+                    <!-- QR Büyüt Butonu -->
+                    <button onclick="openQrModal()" class="mt-4 inline-flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 font-bold text-xs bg-indigo-500/10 hover:bg-indigo-500/20 px-4 py-2.5 rounded-xl border border-indigo-500/20 transition-all w-full justify-center">
+                        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        <span>Tüm Salona Göster (QR Büyüt)</span>
+                    </button>
                 </div>
 
-                <!-- Big QR Modal Button -->
-                <button onclick="openQrModal()" class="mt-6 inline-flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 font-bold text-sm bg-indigo-500/10 hover:bg-indigo-500/20 px-5 py-2.5 rounded-xl border border-indigo-500/20 transition-all">
-                    <i data-lucide="maximize-2" class="w-4 h-4"></i>
-                    <span>Tüm Salona Göster (QR Büyüt)</span>
-                </button>
-            </div>
-
-            <!-- Yatay Kayan Katılımcı Kartları (Avatar, İsim, Okul) -->
-            <div class="w-full mt-12">
-                <div class="flex items-center justify-between mb-4 px-4">
-                    <div class="flex items-center space-x-2 text-slate-400 font-bold text-sm">
-                        <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
-                        <span>Hazır Olan Yarışmacılar</span>
+                <!-- SAĞ SÜTUN: Odaya Katılan İzleyicilerin Akıcı & TEKİL Listesi (Requirement 6 & 7) -->
+                <div class="lg:col-span-7 bg-slate-900/90 border border-slate-800 p-6 sm:p-8 rounded-[2.5rem] shadow-2xl flex flex-col h-full min-h-[500px]">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-4">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold">
+                                <i data-lucide="users" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base sm:text-lg font-black text-white">Hazır Olan Yarışmacılar</h3>
+                                <p class="text-xs text-slate-400">Her yarışmacı için tekil profil kartı gösterilir</p>
+                            </div>
+                        </div>
+                        <span id="lobby-players-count-badge" class="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-black">
+                            0 Katılımcı
+                        </span>
                     </div>
-                    <span class="text-xs text-slate-500 font-medium" id="marquee-status">Katılımcılar bekleniyor...</span>
-                </div>
 
-                <div class="marquee-container bg-slate-900/50 border border-slate-800/80 rounded-2xl py-4 px-2">
-                    <div class="marquee-content" id="participants-marquee">
-                        <!-- Dynamic Player Cards rendered here -->
-                        <div class="inline-flex items-center space-x-3 bg-slate-800/80 border border-slate-700/80 px-4 py-2 rounded-xl text-slate-400 text-sm">
-                            <span>🚀 Katılımcı kartları burada akacak</span>
+                    <!-- Katılımcı Kartları Konteyneri (Mükerrerlik Asla Yok, Her Kişi 1 Kart) -->
+                    <div id="lobby-participants-container" class="flex-1 overflow-y-auto max-h-[420px] pr-2 space-y-2.5">
+                        <!-- Dynamic Single Cards rendered here via stage.js -->
+                        <div id="empty-participants-notice" class="flex flex-col items-center justify-center h-48 text-center text-slate-500">
+                            <i data-lucide="user-plus" class="w-10 h-10 mb-2 opacity-40"></i>
+                            <span class="text-sm font-semibold">İlk yarışmacının odaya bağlanması bekleniyor...</span>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
 
@@ -126,7 +148,7 @@
                 </h3>
             </div>
 
-            <!-- 4 Kahoot Options Grid (Notice Option C with exact bg-yellow-500) -->
+            <!-- 4 Kahoot Options Grid (Option C strictly with bg-yellow-500) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
                 <!-- A: Red Triangle -->
                 <div id="stage-opt-A" class="bg-red-600 rounded-3xl p-6 sm:p-8 flex items-center space-x-6 text-white shadow-xl transition-all">
@@ -251,7 +273,7 @@
                 <div class="flex flex-col items-center podium-2">
                     <div id="podium-2-avatar" class="text-5xl sm:text-6xl mb-3 filter drop-shadow-lg">🥈</div>
                     <span id="podium-2-name" class="font-extrabold text-white text-base sm:text-xl truncate max-w-full">2. Yarışmacı</span>
-                    <span id="podium-2-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Üniversite</span>
+                    <span id="podium-2-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Kurum</span>
                     <span id="podium-2-score" class="text-sm font-black text-slate-300 bg-slate-800/80 px-3 py-1 rounded-full mb-3">0 Puan</span>
                     
                     <div class="w-full h-44 sm:h-56 bg-gradient-to-t from-slate-800 to-slate-700 rounded-t-3xl border-t-4 border-slate-400 flex flex-col items-center justify-center glow-silver shadow-2xl">
@@ -266,7 +288,7 @@
                         <div id="podium-1-avatar" class="text-6xl sm:text-7xl mb-3 filter drop-shadow-2xl">🏆</div>
                     </div>
                     <span id="podium-1-name" class="font-black text-amber-300 text-lg sm:text-2xl truncate max-w-full">1. Şampiyon</span>
-                    <span id="podium-1-school" class="text-xs text-amber-400/80 mb-2 truncate max-w-full">Üniversite</span>
+                    <span id="podium-1-school" class="text-xs text-amber-400/80 mb-2 truncate max-w-full">Kurum</span>
                     <span id="podium-1-score" class="text-base font-black text-amber-950 bg-amber-400 px-4 py-1 rounded-full mb-3 shadow-lg">0 Puan</span>
 
                     <div class="w-full h-64 sm:h-80 bg-gradient-to-t from-amber-700 via-amber-600 to-yellow-500 rounded-t-3xl border-t-4 border-yellow-200 flex flex-col items-center justify-center glow-gold shadow-2xl">
@@ -278,7 +300,7 @@
                 <div class="flex flex-col items-center podium-3">
                     <div id="podium-3-avatar" class="text-5xl sm:text-6xl mb-3 filter drop-shadow-lg">🥉</div>
                     <span id="podium-3-name" class="font-extrabold text-white text-base sm:text-xl truncate max-w-full">3. Yarışmacı</span>
-                    <span id="podium-3-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Üniversite</span>
+                    <span id="podium-3-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Kurum</span>
                     <span id="podium-3-score" class="text-sm font-black text-amber-500 bg-slate-800/80 px-3 py-1 rounded-full mb-3">0 Puan</span>
 
                     <div class="w-full h-36 sm:h-44 bg-gradient-to-t from-amber-950 to-amber-900 rounded-t-3xl border-t-4 border-amber-600 flex flex-col items-center justify-center glow-bronze shadow-2xl">

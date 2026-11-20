@@ -23,9 +23,11 @@ class GameManager:
         self.players: Dict[str, Player] = {}
         self.answer_stats: Dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0}
         self.auto_mode: bool = False
-        self.duration: int = 15 # 5, 10, or 15 seconds
+        self.duration: int = 15 # Question duration: 5, 10, 15, 20, 30s
+        self.transition_delay: int = 5 # Auto leaderboard duration: 3, 5, 10s
         self.timer_remaining: int = 15
         self.leaderboard_countdown: int = 5
+        self.last_reaction: Optional[Dict] = None
         self.question_start_timestamp: float = 0
         self._timer_task: Optional[asyncio.Task] = None
         self._auto_task: Optional[asyncio.Task] = None
@@ -65,6 +67,8 @@ class GameManager:
             "total_questions": len(self.questions),
             "auto_mode": self.auto_mode,
             "duration": self.duration,
+            "question_duration": self.duration,
+            "transition_delay": self.transition_delay,
             "timer_remaining": self.timer_remaining,
             "leaderboard_countdown": self.leaderboard_countdown,
             "question_start_timestamp": self.question_start_timestamp,
@@ -72,6 +76,7 @@ class GameManager:
             "participants_count": len(self.players),
             "answers_count": answers_count,
             "answer_stats": self.answer_stats,
+            "last_reaction": self.last_reaction,
             "updated_at": time.time()
         }
 
@@ -162,6 +167,37 @@ class GameManager:
             self._reset_answers()
             await self.broadcast_state()
 
+    async def add_manual_question(self, question: Question) -> Question:
+        async with self._lock:
+            question.id = len(self.questions) + 1
+            self.questions.append(question)
+            await self.broadcast_state()
+            return question
+
+    async def delete_question(self, question_id: int) -> bool:
+        async with self._lock:
+            initial_len = len(self.questions)
+            self.questions = [q for q in self.questions if q.id != question_id]
+            for idx, q in enumerate(self.questions, start=1):
+                q.id = idx
+            if len(self.questions) < initial_len:
+                await self.broadcast_state()
+                return True
+            return False
+
+    async def post_reaction(self, emoji: str, sender: str = "İzleyici") -> Dict[str, Any]:
+        async with self._lock:
+            import uuid
+            reaction_data = {
+                "id": str(uuid.uuid4())[:8],
+                "emoji": emoji,
+                "sender": sender[:20],
+                "timestamp": time.time()
+            }
+            self.last_reaction = reaction_data
+            await self.broadcast_state()
+            return reaction_data
+
     def _reset_answers(self):
         self.answer_stats = {"A": 0, "B": 0, "C": 0, "D": 0}
         for p in self.players.values():
@@ -251,13 +287,22 @@ class GameManager:
             self._reset_answers()
             await self.broadcast_state()
 
-    async def set_timer_settings(self, duration: int, auto_mode: bool):
+    async def set_timer_settings(
+        self,
+        question_duration: Optional[int] = None,
+        transition_delay: Optional[int] = None,
+        auto_mode: Optional[bool] = None
+    ):
         async with self._lock:
-            if duration in (5, 10, 15):
-                self.duration = duration
+            if question_duration is not None and question_duration in (5, 10, 15, 20, 30):
+                self.duration = question_duration
                 if self.status == "QUESTION":
                     self.timer_remaining = min(self.timer_remaining, self.duration)
-            self.auto_mode = auto_mode
+            if transition_delay is not None and transition_delay in (3, 5, 10, 15):
+                self.transition_delay = transition_delay
+                self.leaderboard_countdown = self.transition_delay
+            if auto_mode is not None:
+                self.auto_mode = auto_mode
             await self.broadcast_state()
 
     async def submit_answer(self, player_id: str, question_id: int, choice: str) -> Dict[str, Any]:
@@ -350,10 +395,11 @@ class GameManager:
         self._auto_task = asyncio.create_task(auto_step())
 
     def _schedule_leaderboard_countdown(self):
-        """Smooth 5-second countdown on Leaderboard before auto-advancing to next question"""
+        """Countdown on Leaderboard based on independent transition_delay before auto-advancing to next question"""
         async def countdown_step():
             try:
-                for c in range(5, 0, -1):
+                start_c = self.transition_delay
+                for c in range(start_c, 0, -1):
                     if not self.auto_mode or self.status != "LEADERBOARD":
                         return
                     self.leaderboard_countdown = c

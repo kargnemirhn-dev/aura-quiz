@@ -30,6 +30,26 @@ let currentRoomPin = "";
 let currentQuestionId = null;
 let hasAnsweredCurrentQuestion = false;
 
+// Name input real-time validation (Requirement 10: Sadece Harf Kuralı)
+function validateNameInput(input) {
+    const warningEl = document.getElementById("name-validation-warning");
+    const val = input.value;
+    const turkishLettersRegex = /^[a-zA-ZçÇğĞıİöÖşŞüÜ\s]*$/;
+
+    if (!turkishLettersRegex.test(val)) {
+        if (warningEl) {
+            warningEl.innerText = "İsimde sadece harf kullanılabilir (Rakam ve özel karakter kabul edilmez).";
+            warningEl.classList.remove("hidden");
+        }
+        input.classList.add("border-amber-500");
+    } else {
+        if (warningEl) {
+            warningEl.classList.add("hidden");
+        }
+        input.classList.remove("border-amber-500");
+    }
+}
+
 // Google-Style Animal Avatar Picker Modal
 function openAvatarModal() {
     tempModalAvatar = selectedAvatar;
@@ -91,12 +111,24 @@ function showToast(msg, duration = 3000) {
     }, duration);
 }
 
-// Join Room Handler
+// Join Room Handler with 3-Strike Ban & Letters-Only checks
 async function handleJoin(e) {
     e.preventDefault();
     const pin = document.getElementById("input-pin").value.trim();
     const name = document.getElementById("input-name").value.trim();
-    const school = document.getElementById("input-school").value.trim() || "Bağımsız";
+    const school = document.getElementById("input-school").value.trim() || "Diğer";
+    const warningBox = document.getElementById("join-warning-box");
+
+    // Client-side letters only validation
+    const lettersRegex = /^[a-zA-ZçÇğĞıİöÖşŞüÜ\s]+$/;
+    if (!lettersRegex.test(name)) {
+        showToast("İsim sadece harflerden oluşmalıdır!");
+        if (warningBox) {
+            warningBox.innerText = "İsim alanında rakam veya özel karakter kullanılamaz.";
+            warningBox.classList.remove("hidden");
+        }
+        return;
+    }
 
     if (!pin || !name) {
         showToast("Lütfen Oda PIN ve Adınızı giriniz!");
@@ -122,11 +154,29 @@ async function handleJoin(e) {
 
         const data = await res.json();
         if (!res.ok) {
-            showToast(data.detail || "Odaya katılırken hata oluştu!");
+            const errorMsg = data.detail || "Odaya katılırken hata oluştu!";
+            if (warningBox) {
+                warningBox.innerText = errorMsg;
+                warningBox.classList.remove("hidden");
+            }
+
+            if (res.status === 403) {
+                // Permanent Ban reached
+                warningBox.className = "p-3.5 rounded-xl text-xs font-black bg-rose-500/20 border border-rose-500/40 text-rose-300 block";
+                document.getElementById("input-name").disabled = true;
+                btn.disabled = true;
+                btn.innerText = "Giriş Engellendi 🚫";
+                showToast("Sistemden 3 ihlal nedeniyle banlandınız!");
+                return;
+            }
+
+            showToast(errorMsg);
             btn.disabled = false;
             btn.innerText = "Yarışmaya Katıl 🚀";
             return;
         }
+
+        if (warningBox) warningBox.classList.add("hidden");
 
         currentPlayer = data.player;
         currentRoomPin = data.room_pin;
@@ -143,7 +193,7 @@ async function handleJoin(e) {
     }
 }
 
-// "Odadan Çık" Button Handler (User explicitly requested this feature!)
+// "Odadan Çık" Button Handler
 async function leaveRoom() {
     if (currentPlayer && currentPlayer.id) {
         try {
@@ -200,13 +250,33 @@ function showLobbyWaiting() {
     }
 }
 
+// Live Reaction Sending Handler (Requirement 2)
+async function sendReaction(emoji) {
+    window.soundManager.playClick();
+    if (navigator.vibrate) navigator.vibrate(20);
+
+    const pin = currentRoomPin || (document.getElementById("input-pin") ? document.getElementById("input-pin").value.trim() : "2026");
+    const playerName = currentPlayer ? currentPlayer.name : "İzleyici";
+
+    try {
+        await fetch("/api/reaction", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                room_pin: pin,
+                emoji: emoji,
+                player_name: playerName
+            })
+        });
+    } catch(e) {}
+}
+
 // Submit Kahoot Button Tap (A, B, C, D)
 async function submitAnswer(choice) {
     if (!currentPlayer || !currentQuestionId || hasAnsweredCurrentQuestion) return;
 
     hasAnsweredCurrentQuestion = true;
 
-    // Haptic feedback for tactile feel on mobile
     if (navigator.vibrate) {
         navigator.vibrate(40);
     }
