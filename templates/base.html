@@ -49,8 +49,23 @@
 
     {% block extra_head %}{% endblock %}
 </head>
-<body class="h-full flex flex-col overflow-x-hidden antialiased bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
-    {% block content %}{% endblock %}
+<body class="h-full flex flex-col overflow-x-hidden antialiased bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black relative">
+    <!-- Floating Tech & Startup Background Icons -->
+    <div class="floating-bg select-none" aria-hidden="true">
+        <span class="float-icon" style="top: 8%; left: 10%; animation-delay: 0s;">💡</span>
+        <span class="float-icon" style="top: 15%; right: 12%; animation-delay: 2s;">⚡</span>
+        <span class="float-icon" style="top: 35%; left: 6%; animation-delay: 4s;">🧠</span>
+        <span class="float-icon" style="top: 48%; right: 8%; animation-delay: 1s;">🚀</span>
+        <span class="float-icon" style="top: 68%; left: 14%; animation-delay: 3s;">🤖</span>
+        <span class="float-icon" style="top: 78%; right: 16%; animation-delay: 5s;">✨</span>
+        <span class="float-icon" style="top: 88%; left: 22%; animation-delay: 2.5s;">📈</span>
+        <span class="float-icon" style="top: 25%; left: 45%; animation-delay: 6s;">🦄</span>
+        <span class="float-icon" style="top: 72%; left: 52%; animation-delay: 3.5s;">🎯</span>
+    </div>
+
+    <div class="relative z-10 flex flex-col flex-1 h-full">
+        {% block content %}{% endblock %}
+    </div>
 
     <!-- Procedural Audio Synthesizer -->
     <script src="/static/js/audio.js"></script>

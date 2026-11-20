@@ -5,6 +5,53 @@ let qrLobbyInstance = null;
 let qrModalInstance = null;
 let knownParticipants = [];
 
+// Stage Security / PIN Authentication
+function checkStageAuth() {
+    const modal = document.getElementById("modal-stage-auth");
+    if (!modal) return;
+    const isAuthed = sessionStorage.getItem("aura_stage_auth") === "true";
+    if (isAuthed) {
+        modal.classList.add("hidden");
+    } else {
+        modal.classList.remove("hidden");
+    }
+}
+
+async function handleStageAuth(e) {
+    e.preventDefault();
+    const pin = document.getElementById("input-stage-pin").value.trim();
+    const btn = document.getElementById("btn-stage-auth-submit");
+    btn.disabled = true;
+    btn.innerText = "Doğrulanıyor...";
+
+    try {
+        const res = await fetch("/api/stage/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stage_pin: pin })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            sessionStorage.setItem("aura_stage_auth", "true");
+            document.getElementById("modal-stage-auth").classList.add("hidden");
+            window.soundManager.playCorrect();
+        } else {
+            alert(data.detail || "Hatalı Sahne PIN!");
+        }
+    } catch(err) {
+        alert("Bağlantı hatası!");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Sahneyi Aç ve Başlat 📺";
+    }
+}
+
+function lockStage() {
+    sessionStorage.removeItem("aura_stage_auth");
+    document.getElementById("modal-stage-auth").classList.remove("hidden");
+    window.soundManager.playClick();
+}
+
 // Initialize QR codes
 function updateQrCodes(pin) {
     currentRoomPin = pin;
@@ -188,6 +235,14 @@ function applyState(state) {
         });
 
     } else if (newStatus === "LEADERBOARD") {
+        const autoCountdownEl = document.getElementById("leaderboard-auto-countdown");
+        if (state.auto_mode) {
+            autoCountdownEl.classList.remove("hidden");
+            document.getElementById("lb-countdown-num").innerText = state.leaderboard_countdown || 5;
+        } else {
+            autoCountdownEl.classList.add("hidden");
+        }
+
         fetch("/api/leaderboard?limit=5")
             .then(res => res.json())
             .then(players => {
@@ -267,6 +322,7 @@ function triggerConfetti() {
 
 // Real-Time Connection Setup (SSE with Firestore client fallback)
 function initRealtime() {
+    checkStageAuth();
     updateQrCodes(currentRoomPin);
 
     // Initial state fetch

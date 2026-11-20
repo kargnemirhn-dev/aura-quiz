@@ -1,5 +1,6 @@
 import asyncio
 import time
+import random
 import logging
 from typing import Dict, List, Optional, Any
 from aura.config import settings
@@ -9,9 +10,13 @@ from aura.firebase_service import sync_game_state_to_firestore, sync_player_to_f
 
 logger = logging.getLogger("aura.game")
 
+def generate_random_6digit_pin() -> str:
+    return str(random.randint(100000, 999999))
+
 class GameManager:
     def __init__(self):
-        self.room_pin: str = settings.DEFAULT_ROOM_PIN
+        # 6-digit random room PIN by default
+        self.room_pin: str = settings.DEFAULT_ROOM_PIN if settings.DEFAULT_ROOM_PIN else generate_random_6digit_pin()
         self.status: str = "LOBBY" # LOBBY, QUESTION, REVEAL, LEADERBOARD, PODIUM
         self.current_question_index: int = 0
         self.questions: List[Question] = gemini_service.get_default_questions()
@@ -20,8 +25,10 @@ class GameManager:
         self.auto_mode: bool = False
         self.duration: int = 15 # 5, 10, or 15 seconds
         self.timer_remaining: int = 15
+        self.leaderboard_countdown: int = 5
         self.question_start_timestamp: float = 0
         self._timer_task: Optional[asyncio.Task] = None
+        self._auto_task: Optional[asyncio.Task] = None
         self._subscribers: List[asyncio.Queue] = []
         self._lock = asyncio.Lock()
 
@@ -59,6 +66,7 @@ class GameManager:
             "auto_mode": self.auto_mode,
             "duration": self.duration,
             "timer_remaining": self.timer_remaining,
+            "leaderboard_countdown": self.leaderboard_countdown,
             "question_start_timestamp": self.question_start_timestamp,
             "current_question": q_dict,
             "participants_count": len(self.players),
@@ -135,6 +143,9 @@ class GameManager:
         if self._timer_task and not self._timer_task.done():
             self._timer_task.cancel()
         self._timer_task = None
+        if self._auto_task and not self._auto_task.done():
+            self._auto_task.cancel()
+        self._auto_task = None
 
     async def update_room_pin(self, new_pin: str) -> str:
         async with self._lock:
@@ -220,9 +231,10 @@ class GameManager:
         async with self._lock:
             self._cancel_timer()
             self.status = "LEADERBOARD"
+            self.leaderboard_countdown = 5
             await self.broadcast_state()
             if self.auto_mode:
-                self._schedule_auto_transition("NEXT_QUESTION", delay_seconds=5)
+                self._schedule_leaderboard_countdown()
 
     async def finish_podium(self):
         async with self._lock:
@@ -332,11 +344,27 @@ class GameManager:
                     return
                 if target == "LEADERBOARD" and self.status == "REVEAL":
                     await self.show_leaderboard()
-                elif target == "NEXT_QUESTION" and self.status == "LEADERBOARD":
+            except asyncio.CancelledError:
+                pass
+
+        self._auto_task = asyncio.create_task(auto_step())
+
+    def _schedule_leaderboard_countdown(self):
+        """Smooth 5-second countdown on Leaderboard before auto-advancing to next question"""
+        async def countdown_step():
+            try:
+                for c in range(5, 0, -1):
+                    if not self.auto_mode or self.status != "LEADERBOARD":
+                        return
+                    self.leaderboard_countdown = c
+                    await self.broadcast_state()
+                    await asyncio.sleep(1)
+
+                if self.auto_mode and self.status == "LEADERBOARD":
                     await self.next_question()
             except asyncio.CancelledError:
                 pass
 
-        asyncio.create_task(auto_step())
+        self._auto_task = asyncio.create_task(countdown_step())
 
 game_manager = GameManager()

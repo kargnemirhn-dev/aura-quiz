@@ -52,6 +52,88 @@ function adminLogout() {
     window.soundManager.playClick();
 }
 
+// Admin PIN Değiştirme Modal Yönetimi (Explicit User Requirement)
+function openChangePinModal() {
+    document.getElementById("modal-change-admin-pin").classList.remove("hidden");
+    window.soundManager.playClick();
+}
+
+function closeChangePinModal() {
+    document.getElementById("modal-change-admin-pin").classList.add("hidden");
+    window.soundManager.playClick();
+}
+
+async function handleChangeAdminPin(e) {
+    e.preventDefault();
+    const currPin = document.getElementById("input-current-admin-pin").value.trim();
+    const newPin = document.getElementById("input-new-admin-pin").value.trim();
+    const confirmPin = document.getElementById("input-confirm-admin-pin").value.trim();
+
+    if (newPin !== confirmPin) {
+        alert("Yeni PIN ile PIN tekrarı uyuşmuyor!");
+        return;
+    }
+
+    const btn = document.getElementById("btn-save-admin-pin");
+    btn.disabled = true;
+    btn.innerText = "Güncelleniyor...";
+
+    try {
+        const res = await fetch("/api/admin/change-pin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                current_pin: currPin,
+                new_pin: newPin
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            adminPin = newPin;
+            sessionStorage.setItem("aura_admin_pin", adminPin);
+            closeChangePinModal();
+            document.getElementById("input-current-admin-pin").value = "";
+            document.getElementById("input-new-admin-pin").value = "";
+            document.getElementById("input-confirm-admin-pin").value = "";
+            window.soundManager.playCorrect();
+            alert("Admin PIN başarıyla güncellendi!");
+        } else {
+            alert(data.detail || "Admin PIN güncellenemedi!");
+        }
+    } catch(err) {
+        alert("Bağlantı hatası!");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Yeni Şifreyi Kaydet";
+    }
+}
+
+// 6 Haneli Rastgele Oda PIN Üretimi
+async function generateRandomRoomPin() {
+    if (!adminPin) {
+        checkAdminAuth();
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/admin/random-pin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ admin_pin: adminPin })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            document.getElementById("admin-pin-display").innerText = data.room_pin;
+            window.soundManager.playCorrect();
+            alert("Yeni 6 Haneli Rastgele Oda PIN oluşturuldu: " + data.room_pin);
+        } else {
+            alert(data.detail || "Rastgele PIN üretilemedi!");
+        }
+    } catch(err) {
+        alert("Ağ hatası!");
+    }
+}
+
 // Update Room PIN (Syncs to Firestore)
 async function updateRoomPin(e) {
     e.preventDefault();

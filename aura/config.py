@@ -13,9 +13,13 @@ class Settings:
     PROJECT_SUBTITLE: str = "Aura Bilgi Yarışması"
     VERSION: str = "2.0.0"
 
-    # Admin Security
-    ADMIN_PIN: str = os.getenv("ADMIN_PIN", "1923")
-    DEFAULT_ROOM_PIN: str = os.getenv("DEFAULT_ROOM_PIN", "2026")
+    # Security & Access Controls
+    ADMIN_PIN: str = os.getenv("ADMIN_PIN", "220126")
+    STAGE_PIN: str = os.getenv("STAGE_PIN", "220126")
+    DEFAULT_ROOM_PIN: str = os.getenv("DEFAULT_ROOM_PIN", "")
+
+    def set_admin_pin(self, new_pin: str):
+        self.ADMIN_PIN = new_pin.strip()
 
     # Gemini AI API
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")

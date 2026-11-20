@@ -32,9 +32,12 @@
             </div>
         </div>
 
-        <!-- Fullscreen & Sound Controls -->
+        <!-- Fullscreen, Lock & Controls -->
         <div class="flex items-center space-x-3">
-            <button id="btn-fullscreen" onclick="toggleFullscreen()" class="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all">
+            <button id="btn-lock-stage" onclick="lockStage()" class="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all" title="Sahneyi Kilitle">
+                <i data-lucide="lock" class="w-5 h-5"></i>
+            </button>
+            <button id="btn-fullscreen" onclick="toggleFullscreen()" class="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all" title="Tam Ekran">
                 <i data-lucide="maximize" class="w-5 h-5"></i>
             </button>
         </div>
@@ -210,12 +213,18 @@
 
         <!-- 4. LEADERBOARD VIEW -->
         <div id="view-leaderboard" class="w-full max-w-4xl flex flex-col items-center hidden fade-in">
-            <div class="text-center mb-8">
+            <div class="text-center mb-6">
                 <span class="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-5 py-1.5 rounded-full text-sm font-extrabold mb-3">
                     <i data-lucide="trophy" class="w-4 h-4"></i>
                     <span>GÜNCEL SIRALAMA</span>
                 </span>
                 <h3 class="text-3xl sm:text-4xl font-black text-white">Liderlik Tablosu</h3>
+
+                <!-- Auto Mode 5s Countdown Banner -->
+                <div id="leaderboard-auto-countdown" class="hidden mt-4 inline-flex items-center space-x-2 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 px-5 py-2 rounded-2xl text-sm font-black shadow-lg">
+                    <i data-lucide="timer" class="w-4 h-4 text-indigo-400 animate-spin"></i>
+                    <span>Sıradaki soruya geçiliyor: <span id="lb-countdown-num" class="text-white text-lg font-mono">5</span> saniye</span>
+                </div>
             </div>
 
             <div id="leaderboard-list" class="w-full space-x-0 space-y-3">
@@ -304,6 +313,27 @@
                 <span class="text-sm uppercase font-bold text-slate-400">Oda Kodu:</span>
                 <span class="text-3xl font-mono font-black text-white" id="modal-pin-display">{{ room_pin }}</span>
             </div>
+        </div>
+    </div>
+
+    <!-- STAGE AUTHENTICATION MODAL (Sahne Ekranı Güvenlik Kilidi) -->
+    <div id="modal-stage-auth" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex items-center justify-center p-6 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 sm:p-10 max-w-md w-full text-center shadow-2xl relative">
+            <div class="w-16 h-16 rounded-3xl bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-purple-500/20">
+                <i data-lucide="shield-check" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-2xl font-black text-white mb-2">Sahne Ekranı Kilidi</h3>
+            <p class="text-xs sm:text-sm text-slate-400 mb-6">
+                Projeksiyon sahne ekranını başlatmak için yetkili Sahne / Admin PIN kodunu giriniz.
+            </p>
+
+            <form onsubmit="handleStageAuth(event)" class="space-y-4">
+                <input type="password" id="input-stage-pin" required placeholder="PIN Kodu (Örn: 220126)" autofocus
+                    class="w-full bg-slate-950 border border-slate-700 focus:border-purple-500 rounded-2xl px-4 py-3.5 text-center text-3xl font-mono font-black text-white tracking-widest outline-none transition-all">
+                <button type="submit" id="btn-stage-auth-submit" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black py-4 rounded-xl text-sm shadow-xl shadow-purple-600/30 transition-all active:scale-[0.98]">
+                    Sahneyi Aç ve Başlat 📺
+                </button>
+            </form>
         </div>
     </div>
 

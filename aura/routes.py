@@ -10,7 +10,9 @@ from aura.models import (
     PinUpdateRequest,
     TimerSettingRequest,
     AdminActionRequest,
-    AnswerSubmission
+    AnswerSubmission,
+    AdminPinChangeRequest,
+    StageAuthRequest
 )
 from aura.game_manager import game_manager
 from aura.gemini_service import gemini_service
@@ -111,6 +113,13 @@ async def events_stream(request: Request):
     )
 
 # --- Public API Routes ---
+@router.post("/api/stage/verify")
+async def stage_verify(payload: StageAuthRequest):
+    pin = payload.stage_pin.strip()
+    if pin == settings.STAGE_PIN or pin == settings.ADMIN_PIN:
+        return {"success": True, "message": "Sahne yetkilendirmesi başarılı"}
+    raise HTTPException(status_code=403, detail="Hatalı Sahne PIN kodu!")
+
 @router.get("/api/state")
 async def get_state():
     return game_manager.get_public_state()
@@ -177,6 +186,23 @@ async def admin_verify(payload: Dict[str, str]):
     if pin == settings.ADMIN_PIN:
         return {"success": True, "message": "Yetkilendirme başarılı"}
     raise HTTPException(status_code=403, detail="Hatalı Admin PIN!")
+
+@router.post("/api/admin/change-pin")
+async def admin_change_pin(payload: AdminPinChangeRequest):
+    if payload.current_pin.strip() != settings.ADMIN_PIN:
+        raise HTTPException(status_code=403, detail="Mevcut Admin PIN hatalı!")
+    if len(payload.new_pin.strip()) < 4:
+        raise HTTPException(status_code=400, detail="Yeni PIN en az 4 karakter olmalıdır!")
+    settings.set_admin_pin(payload.new_pin.strip())
+    return {"success": True, "message": "Admin PIN başarıyla güncellendi!"}
+
+@router.post("/api/admin/random-pin")
+async def admin_random_pin(payload: Dict[str, str]):
+    verify_admin_pin(payload.get("admin_pin", ""))
+    from aura.game_manager import generate_random_6digit_pin
+    new_pin = generate_random_6digit_pin()
+    await game_manager.update_room_pin(new_pin)
+    return {"success": True, "room_pin": new_pin}
 
 @router.post("/api/admin/pin")
 async def admin_update_pin(payload: PinUpdateRequest):

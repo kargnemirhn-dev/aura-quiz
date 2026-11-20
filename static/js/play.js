@@ -1,27 +1,81 @@
-// Player Screen Controller (Strict Kahoot mobile guidelines)
+// Player Screen Controller (Strict Kahoot mobile guidelines + Google Animal Avatar System)
 
-const AVATARS = ["🚀", "🤖", "💡", "⚡", "🧠", "🦄", "🏆", "🎯", "🔥", "👑", "💻", "🪐"];
-let selectedAvatar = "🚀";
+const ANIMAL_AVATARS = [
+    { emoji: "🐼", name: "Panda" },
+    { emoji: "🦊", name: "Tilki" },
+    { emoji: "🐱", name: "Kedi" },
+    { emoji: "🐺", name: "Kurt" },
+    { emoji: "🦁", name: "Aslan" },
+    { emoji: "🦉", name: "Baykuş" },
+    { emoji: "🐻", name: "Ayı" },
+    { emoji: "🐨", name: "Koala" },
+    { emoji: "🐰", name: "Tavşan" },
+    { emoji: "🐵", name: "Maymun" },
+    { emoji: "🐯", name: "Kaplan" },
+    { emoji: "🐧", name: "Penguen" },
+    { emoji: "🦅", name: "Kartal" },
+    { emoji: "🦒", name: "Zürafa" },
+    { emoji: "🦔", name: "Kirpi" },
+    { emoji: "🐬", name: "Yunus" },
+    { emoji: "🐸", name: "Kurbağa" },
+    { emoji: "🦩", name: "Flamingo" },
+    { emoji: "🦭", name: "Fok" },
+    { emoji: "🦦", name: "Su Samuru" }
+];
+
+let selectedAvatar = "🐼";
+let tempModalAvatar = "🐼";
 let currentPlayer = null;
 let currentRoomPin = "";
 let currentQuestionId = null;
 let hasAnsweredCurrentQuestion = false;
 
-// Render Avatar Picker Grid
-function initAvatarPicker() {
-    const grid = document.getElementById("avatar-grid");
-    if (!grid) return;
-    grid.innerHTML = AVATARS.map((av, idx) => `
-        <button type="button" onclick="selectAvatar('${av}')" class="avatar-option p-2 text-2xl rounded-xl transition-all hover:bg-slate-800 ${av === selectedAvatar ? 'bg-indigo-600/40 ring-2 ring-indigo-500 scale-105' : ''}">
-            ${av}
-        </button>
-    `).join("");
+// Google-Style Animal Avatar Picker Modal
+function openAvatarModal() {
+    tempModalAvatar = selectedAvatar;
+    renderAnimalAvatarGrid();
+    document.getElementById("modal-avatar").classList.remove("hidden");
+    window.soundManager.playClick();
 }
 
-function selectAvatar(av) {
-    selectedAvatar = av;
-    initAvatarPicker();
+function closeAvatarModal() {
+    document.getElementById("modal-avatar").classList.add("hidden");
     window.soundManager.playClick();
+}
+
+function renderAnimalAvatarGrid() {
+    const grid = document.getElementById("animal-avatar-grid");
+    if (!grid) return;
+    grid.innerHTML = ANIMAL_AVATARS.map(item => `
+        <button type="button" onclick="selectModalAvatar('${item.emoji}', '${item.name}')" 
+            class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-950/80 border transition-all hover:bg-slate-800 hover:scale-105 active:scale-95 ${item.emoji === tempModalAvatar ? 'border-indigo-500 bg-indigo-600/20 ring-2 ring-indigo-500/50' : 'border-slate-800'}">
+            <span class="text-3xl sm:text-4xl filter drop-shadow mb-1.5">${item.emoji}</span>
+            <span class="text-[11px] font-bold text-slate-300 leading-tight">${item.name}</span>
+        </button>
+    `).join("");
+
+    const currentItem = ANIMAL_AVATARS.find(a => a.emoji === tempModalAvatar) || ANIMAL_AVATARS[0];
+    document.getElementById("modal-selected-preview").innerText = currentItem.emoji;
+    document.getElementById("modal-selected-name").innerText = currentItem.name;
+}
+
+function selectModalAvatar(emoji, name) {
+    tempModalAvatar = emoji;
+    renderAnimalAvatarGrid();
+    window.soundManager.playClick();
+}
+
+function confirmAvatarSelection() {
+    selectedAvatar = tempModalAvatar;
+    const currentItem = ANIMAL_AVATARS.find(a => a.emoji === selectedAvatar) || ANIMAL_AVATARS[0];
+    
+    // Update main form preview
+    document.getElementById("current-avatar-preview").innerText = currentItem.emoji;
+    document.getElementById("current-avatar-name").innerText = currentItem.name;
+    
+    closeAvatarModal();
+    showToast(`${currentItem.name} avatarı seçildi! 🐾`);
+    window.soundManager.playCorrect();
 }
 
 // Show Toast Message
@@ -277,7 +331,12 @@ function applyState(state) {
 
 // Initial Setup
 function initPlayer() {
-    initAvatarPicker();
+    renderAnimalAvatarGrid();
+    const currentItem = ANIMAL_AVATARS.find(a => a.emoji === selectedAvatar) || ANIMAL_AVATARS[0];
+    const previewEl = document.getElementById("current-avatar-preview");
+    const nameEl = document.getElementById("current-avatar-name");
+    if (previewEl) previewEl.innerText = currentItem.emoji;
+    if (nameEl) nameEl.innerText = currentItem.name;
 
     // Check saved session
     const saved = localStorage.getItem("aura_player");

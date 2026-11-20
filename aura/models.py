@@ -38,6 +38,13 @@ class PinUpdateRequest(BaseModel):
     admin_pin: str
     new_room_pin: str
 
+class AdminPinChangeRequest(BaseModel):
+    current_pin: str
+    new_pin: str
+
+class StageAuthRequest(BaseModel):
+    stage_pin: str
+
 class TimerSettingRequest(BaseModel):
     admin_pin: str
     duration: int # 5, 10, or 15 seconds

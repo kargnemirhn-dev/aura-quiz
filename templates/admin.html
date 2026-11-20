@@ -17,19 +17,25 @@
             </div>
         </div>
 
-        <!-- Room PIN & Status Badges -->
-        <div class="flex items-center space-x-3">
-            <div class="bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl flex items-center space-x-2">
+        <!-- Room PIN, Status & Security Actions -->
+        <div class="flex items-center space-x-2.5">
+            <div class="bg-slate-950 border border-slate-800 px-3.5 py-2 rounded-xl flex items-center space-x-2">
                 <span class="text-xs uppercase font-bold text-slate-400">Durum:</span>
                 <span id="admin-status-badge" class="text-xs font-black px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                     LOBBY
                 </span>
             </div>
 
-            <div class="bg-slate-950 border border-slate-800 px-4 py-2 rounded-xl flex items-center space-x-2">
-                <span class="text-xs uppercase font-bold text-slate-400">PIN:</span>
-                <span id="admin-pin-display" class="font-mono text-base font-black text-white">{{ room_pin }}</span>
+            <div class="bg-slate-950 border border-slate-800 px-3.5 py-2 rounded-xl flex items-center space-x-2">
+                <span class="text-xs uppercase font-bold text-slate-400">Oda PIN:</span>
+                <span id="admin-pin-display" class="font-mono text-base font-black text-white tracking-widest">{{ room_pin }}</span>
             </div>
+
+            <!-- "Admin PIN Değiştir" Butonu (Explicit User Requirement) -->
+            <button onclick="openChangePinModal()" class="flex items-center space-x-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm" title="Admin PIN Değiştir">
+                <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Admin PIN Değiştir</span>
+            </button>
 
             <button onclick="adminLogout()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all" title="Çıkış Yap">
                 <i data-lucide="lock" class="w-4 h-4"></i>
@@ -43,23 +49,28 @@
         <!-- LEFT COLUMN: Room Controls & Timers -->
         <div class="space-y-6">
             
-            <!-- 1. Room PIN Management Card -->
+            <!-- 1. Room PIN Management Card (6-Digit & Random Support) -->
             <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
                 <h3 class="text-base font-extrabold text-white mb-1 flex items-center space-x-2">
-                    <i data-lucide="key" class="w-4 h-4 text-pink-400"></i>
-                    <span>Oda PIN Yönetimi</span>
+                    <i data-lucide="hash" class="w-4 h-4 text-pink-400"></i>
+                    <span>Oda PIN Yönetimi (6 Haneli)</span>
                 </h3>
-                <p class="text-xs text-slate-400 mb-4">Oda PIN'ini anında değiştirin ve Firestore'a kaydedin.</p>
+                <p class="text-xs text-slate-400 mb-4">6 haneli oda PIN'ini manuel güncelleyin veya rastgele üretin.</p>
 
                 <form onsubmit="updateRoomPin(event)" class="space-y-3">
                     <div class="flex space-x-2">
-                        <input type="text" id="admin-new-pin" required maxlength="8" placeholder="Yeni PIN (Örn: 2026)"
-                            class="flex-1 bg-slate-950 border border-slate-700 focus:border-pink-500 rounded-xl px-4 py-2.5 font-mono text-base font-black text-white outline-none">
+                        <input type="text" id="admin-new-pin" required maxlength="6" pattern="[0-9]{3,6}" placeholder="Örn: 849201"
+                            class="flex-1 bg-slate-950 border border-slate-700 focus:border-pink-500 rounded-xl px-4 py-2.5 font-mono text-base font-black text-white tracking-widest outline-none">
                         <button type="submit" class="bg-pink-600 hover:bg-pink-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all active:scale-95 shadow-md shadow-pink-600/30">
-                            Güncelle
+                            Kaydet
                         </button>
                     </div>
                 </form>
+
+                <button type="button" onclick="generateRandomRoomPin()" class="mt-3 w-full inline-flex items-center justify-center space-x-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-bold py-2.5 rounded-xl text-xs transition-all active:scale-95">
+                    <i data-lucide="dice-5" class="w-4 h-4 text-pink-400"></i>
+                    <span>🎲 6 Haneli Rastgele PIN Üret</span>
+                </button>
             </div>
 
             <!-- 2. Timer & Auto Mode Settings Card -->
@@ -210,10 +221,47 @@
             <p class="text-xs text-slate-400 mb-6">Yönetici PIN kodunuzu giriniz.</p>
 
             <form onsubmit="handleAdminAuth(event)" class="space-y-4">
-                <input type="password" id="input-admin-pin" required placeholder="PIN Kodu" autofocus
+                <input type="password" id="input-admin-pin" required placeholder="Varsayılan: 220126" autofocus
                     class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl px-4 py-3 text-center text-2xl font-mono font-black text-white outline-none">
                 <button type="submit" id="btn-admin-login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30">
                     Giriş Yap
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Admin PIN Modal (Explicit User Requirement) -->
+    <div id="modal-change-admin-pin" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative">
+            <button onclick="closeChangePinModal()" class="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="w-14 h-14 rounded-2xl bg-amber-600/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="key" class="w-7 h-7"></i>
+            </div>
+            <h3 class="text-xl font-black text-white mb-1">Admin PIN Değiştir</h3>
+            <p class="text-xs text-slate-400 mb-6">Yönetici giriş şifrenizi güncelleyin.</p>
+
+            <form onsubmit="handleChangeAdminPin(event)" class="space-y-3.5 text-left">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mevcut Admin PIN</label>
+                    <input type="password" id="input-current-admin-pin" required placeholder="Mevcut PIN"
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-center font-mono font-black text-white outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Yeni Admin PIN</label>
+                    <input type="password" id="input-new-admin-pin" required minlength="4" placeholder="Yeni PIN (min 4 hane)"
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-center font-mono font-black text-white outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Yeni PIN Tekrar</label>
+                    <input type="password" id="input-confirm-admin-pin" required minlength="4" placeholder="Yeni PIN Tekrar"
+                        class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-center font-mono font-black text-white outline-none">
+                </div>
+
+                <button type="submit" id="btn-save-admin-pin" class="mt-2 w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-sm transition-all shadow-lg shadow-amber-500/30 active:scale-95">
+                    Yeni Şifreyi Kaydet
                 </button>
             </form>
         </div>

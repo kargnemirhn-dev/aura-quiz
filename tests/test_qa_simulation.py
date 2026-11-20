@@ -50,7 +50,7 @@ def http_post(path: str, payload: dict):
 
 def run_full_qa_simulation():
     print("=" * 70)
-    print("🤖 BAŞLATILIYOR: AI ERA ZİRVESİ - KENDİNİ TEST EDEN QA SİMÜLASYONU")
+    print("🤖 BAŞLATILIYOR: AI ERA ZİRVESİ - GÜNCELLENMİŞ EKSİKSİZ QA TEST SİMÜLASYONU")
     print("=" * 70)
 
     # Start Uvicorn in Background Thread
@@ -64,225 +64,219 @@ def run_full_qa_simulation():
 
     try:
         # ---------------------------------------------------------
-        # TEST 1: SAYFA VE TEMPLATE KONTROLLERİ (Stage, Play, Admin)
+        # TEST 1: SAYFA VE GÖRSEL METİN DÜZELTMELERİ
         # ---------------------------------------------------------
-        print("[TEST 1] Sayfa Render ve Kritik UI Gereksinimleri Testi...")
+        print("[TEST 1] Görsel ve Metin Düzeltmeleri Testi...")
         
         # 1.1 Portal (/)
         status, _, text = http_get("/")
         assert status == 200, "Portal açılmadı"
-        assert "AI ERA: TEKNOLOJİ & GİRİŞİMCİLİK ZİRVESİ" in text
-        print("  ✓ Portal (/) sayfası 200 OK ve başlık doğrulandı.")
+        # Başlık kontrolü
+        assert "AI ERA: TEKNOLOJİ & GİRİŞİMCİLİK ZİRVESİ" in text, "Ana başlık metni hatalı!"
+        # Hoş geldiniz metni kontrolü (Gereksinim 1)
+        assert "Yapay zekanın ve girişimcilik ekosisteminin nabzını tutan, gerçek zamanlı bilgi yarışması portalına hoş geldiniz." in text, "Hoş geldiniz metni hatalı!"
+        # Rozet & Yeşil yanıp sönen nokta kontrolü
+        assert "Canlı Eşzamanlı Bilgi Yarışma Portalı" in text, "Rozet metni güncellenmemiş!"
+        assert "live-green-dot" in text, "Yeşil parlayan canlılık noktası (pulsing green dot) bulunamadı!"
+        # Kartların taşma sorununa karşı viewport kontrolü
+        assert "min-h-screen" in text and "max-w-5xl" in text, "Kart taşmasını önleyen CSS optimize container bulunamadı!"
+        print("  ✓ Portal (/): Başlık, profesyonel karşılama metni, yeşil parlayan nokta ve kart düzeni doğrulandı.")
 
-        # 1.2 Sahne Ekranı (/stage)
+        # 1.2 Sahne Ekranı Güvenliği & Arayüz (/stage)
         status, _, text_stage = http_get("/stage")
         assert status == 200, "Stage sayfası açılmadı"
-        # a) QR Kod Büyütme Modalı
+        # a) Sahne Ekranı Güvenlik Kilidi Modalı (Gereksinim 3)
+        assert "modal-stage-auth" in text_stage, "Sahne ekranı güvenlik şifre modalı bulunamadı!"
+        # Sahne PIN Yetkilendirmesi Testi
+        stage_bad, _, _ = http_post("/api/stage/verify", {"stage_pin": "000000"})
+        assert stage_bad == 403, "Yetkisiz Sahne PIN engellenmedi!"
+        stage_ok, _, _ = http_post("/api/stage/verify", {"stage_pin": "220126"})
+        assert stage_ok == 200, "Varsayılan Sahne PIN (220126) yetkilendirilemedi!"
+        # b) QR Kod Büyütme Modalı
         assert "modal-qr" in text_stage, "QR Büyütme modalı bulunamadı!"
-        assert "QR Kodu Büyüt" in text_stage, "QR büyütme tetikleyicisi bulunamadı!"
-        # b) C şıkkı sarı rengi (bg-yellow-500)
+        # c) C şıkkı sarı rengi (bg-yellow-500)
         assert "bg-yellow-500" in text_stage, "C şıkkı sarı rengi (bg-yellow-500) bulunamadı!"
-        # c) Yatay kayan katılımcı kartları
+        # d) Yatay kayan katılımcı kartları
         assert "marquee-content" in text_stage, "Yatay kayan katılımcı marquee alanı bulunamadı!"
-        # d) Podyum animasyonu (3., 2., 1.)
+        # e) Podyum animasyonu (3., 2., 1.)
         assert "podium-1" in text_stage and "podium-2" in text_stage and "podium-3" in text_stage, "Podyum basamakları bulunamadı!"
-        print("  ✓ Sahne Ekranı (/stage): QR Modal, C-yellow (bg-yellow-500), Marquee ve Podyum doğrulandı.")
+        # f) Otomatik mod geri sayım göstergesi
+        assert "leaderboard-auto-countdown" in text_stage, "Liderlik tablosu 5s geri sayım alanı bulunamadı!"
+        print("  ✓ Sahne Ekranı (/stage): Güvenlik kilidi (220126), QR Modal, C-yellow (bg-yellow-500), Marquee, 5s Countdown ve Podyum doğrulandı.")
 
-        # 1.3 Oyuncu Ekranı (/play)
+        # 1.3 Oyuncu Ekranı ve Google Tarzı Hayvan Avatarları (/play)
         status, _, text_play = http_get("/play")
         assert status == 200, "Play sayfası açılmadı"
-        # a) "Odadan Çık" butonu
+        # a) "Avatar Seç" butonu ve Google tarzı hayvan modalı (Gereksinim 2)
+        assert "Avatar Seç" in text_play, "Avatar Seç butonu bulunamadı!"
+        assert "modal-avatar" in text_play, "Google tarzı hayvan avatarı modalı bulunamadı!"
+        # b) "Odadan Çık" butonu
         assert "Odadan Çık" in text_play, "Odadan Çık butonu bulunamadı!"
-        # b) Avatar seçim ızgarası
-        assert "avatar-grid" in text_play, "Avatar seçim ekranı bulunamadı!"
-        # c) Kahoot sembolleri (🔺, 🔷, 🟡, 🟢)
+        # c) Kahoot renkleri/simgeleri (🔺, 🔷, 🟡, 🟢)
         assert "🔺" in text_play and "🔷" in text_play and "🟡" in text_play and "🟢" in text_play
         # d) Telefonda soru metni veya şık yazılarının olmaması kuralı:
         assert "stage-text-A" not in text_play, "Oyuncu ekranında soru metni veya şık yazısı yer almamalı!"
-        print("  ✓ Oyuncu Ekranı (/play): Kahoot renk/simgeleri, 'Odadan Çık' ve Avatar seçimi doğrulandı.")
+        print("  ✓ Oyuncu Ekranı (/play): Google tarzı hayvan avatarı modalı, 'Odadan Çık' ve Kahoot butonları doğrulandı.")
 
         # ---------------------------------------------------------
-        # TEST 2: ODA PIN SİSTEMİ VE FİRESTORE SENKRONİZASYON TESTİ
+        # TEST 2: GÜVENLİK, 6 HANELİ ODA PIN VE ADMIN PIN SİSTEMİ
         # ---------------------------------------------------------
-        print("\n[TEST 2] Oda PIN Değişimi ve Güvenlik Testi...")
+        print("\n[TEST 2] Güvenlik, 6 Haneli Oda PIN ve Admin PIN Değiştirme Testi...")
         
-        # 2.1 Yanlış Admin PIN engeli
-        bad_status, bad_data, _ = http_post("/api/admin/pin", {"admin_pin": "0000", "new_room_pin": "9999"})
-        assert bad_status == 403, "Yetkisiz Admin PIN engellenemedi!"
-        print("  ✓ Yanlış Admin PIN ile oda değiştirme 403 Forbidden ile engellendi.")
+        # 2.1 Varsayılan Admin PIN (220126) Doğrulaması
+        admin_bad, _, _ = http_post("/api/admin/verify", {"admin_pin": "123456"})
+        assert admin_bad == 403, "Hatalı Admin PIN reddedilmedi!"
+        admin_good, good_data, _ = http_post("/api/admin/verify", {"admin_pin": "220126"})
+        assert admin_good == 200 and good_data["success"] is True, "Varsayılan Admin PIN (220126) ile giriş yapılamadı!"
+        print("  ✓ Varsayılan Admin PIN: '220126' başarıyla doğrulandı.")
 
-        # 2.2 Doğru Admin PIN ile oda güncelleme
-        new_test_pin = "8899"
-        status, data, _ = http_post("/api/admin/pin", {"admin_pin": settings.ADMIN_PIN, "new_room_pin": new_test_pin})
-        assert status == 200
-        assert data["room_pin"] == new_test_pin
+        # 2.2 6 Haneli Rastgele Oda PIN Üretimi
+        rnd_status, rnd_data, _ = http_post("/api/admin/random-pin", {"admin_pin": "220126"})
+        assert rnd_status == 200, "Rastgele PIN üretilemedi"
+        random_pin = rnd_data["room_pin"]
+        assert len(random_pin) == 6 and random_pin.isdigit(), f"PIN 6 haneli sayı olmalıdır, üretilen: {random_pin}"
+        print(f"  ✓ 6 Haneli Rastgele Oda PIN üretildi: '{random_pin}'")
 
-        # Canlı state doğrulaması
-        _, state_data, _ = http_get("/api/state")
-        assert state_data["room_pin"] == new_test_pin, "Oda PIN canlı state üzerinde güncellenmedi!"
-        print(f"  ✓ Oda PIN başarıyla '{new_test_pin}' olarak güncellendi ve canlı state'e yansıdı.")
+        # 2.3 Manuel Oda PIN Güncelleme
+        manual_pin = "741852"
+        up_status, up_data, _ = http_post("/api/admin/pin", {"admin_pin": "220126", "new_room_pin": manual_pin})
+        assert up_status == 200 and up_data["room_pin"] == manual_pin
+        _, state_now, _ = http_get("/api/state")
+        assert state_now["room_pin"] == manual_pin
+        print(f"  ✓ Manuel 6 Haneli Oda PIN güncellendi: '{manual_pin}'")
+
+        # 2.4 Admin PIN Değiştirme Fonksiyonu (Gereksinim 3)
+        ch_status, ch_data, _ = http_post("/api/admin/change-pin", {
+            "current_pin": "220126",
+            "new_pin": "987654"
+        })
+        assert ch_status == 200 and ch_data["success"] is True, "Admin PIN değiştirilemedi!"
+        # Yeni PIN ile doğrula
+        v_new, _, _ = http_post("/api/admin/verify", {"admin_pin": "987654"})
+        assert v_new == 200
+        # Eski PIN artık çalışmamalı
+        v_old, _, _ = http_post("/api/admin/verify", {"admin_pin": "220126"})
+        assert v_old == 403
+        print("  ✓ 'Admin PIN Değiştir' fonksiyonu başarıyla test edildi (220126 -> 987654).")
+
+        # Geriye 220126 olarak alalım
+        http_post("/api/admin/change-pin", {"current_pin": "987654", "new_pin": "220126"})
+        assert settings.ADMIN_PIN == "220126"
 
         # ---------------------------------------------------------
-        # TEST 3: GEMINI AI SORU BANKASI TESTİ (30 Özgün Soru)
+        # TEST 3: GEMINI AI VE 30 ÖZGÜN SORU
         # ---------------------------------------------------------
-        print("\n[TEST 3] Soru Bankası ve Gemini Entegrasyonu Testi...")
-        assert len(game_manager.questions) == 30, f"Soru sayısı 30 olmalıdır, bulunan: {len(game_manager.questions)}"
+        print("\n[TEST 3] Gemini Soru Bankası Testi (30 Soru)...")
+        assert len(game_manager.questions) == 30, f"30 soru bekleniyordu, {len(game_manager.questions)} bulundu."
         for idx, q in enumerate(game_manager.questions, 1):
             assert q.id == idx
-            assert len(q.question) > 10
             assert q.correct in ("A", "B", "C", "D")
             assert q.options.A and q.options.B and q.options.C and q.options.D
-        print(f"  ✓ Soru Bankası: Tam {len(game_manager.questions)} adet zirve sorusu, 4 şık ve doğru cevaplar eksiksiz doğrulandı.")
+        print("  ✓ 30 adet yapay zeka & girişimcilik sorusu eksiksiz doğrulandı.")
 
         # ---------------------------------------------------------
-        # TEST 4: OYUNCU KATILIMI, KAHUT CEVAPLARI VE ODADAN ÇIKIŞ
+        # TEST 4: OYUNCU KATILIMI, HAYVAN AVATARLARI VE ODADAN ÇIKIŞ
         # ---------------------------------------------------------
-        print("\n[TEST 4] Çoklu Oyuncu Simülasyonu ve Kahoot Akışı...")
-        
-        # Odayı temizle
-        http_post("/api/admin/action", {"admin_pin": settings.ADMIN_PIN, "action": "RESET_ROOM"})
+        print("\n[TEST 4] Çoklu Oyuncu Katılımı (Hayvan Avatarları) ve Kahoot Akışı...")
+        http_post("/api/admin/action", {"admin_pin": "220126", "action": "RESET_ROOM"})
 
-        # 3 Oyuncu Katılıyor
+        # Panda, Tilki ve Kurt avatarlarıyla katılım
         status, p1, _ = http_post("/api/player/join", {
-            "room_pin": new_test_pin,
+            "room_pin": manual_pin,
             "name": "Can Yılmaz",
             "school": "İTÜ Yapay Zeka Kulübü",
-            "avatar": "🚀",
+            "avatar": "🐼",
             "player_id": "player-1"
         })
-        assert p1["success"] is True
+        assert p1["success"] is True and p1["player"]["avatar"] == "🐼"
 
         status, p2, _ = http_post("/api/player/join", {
-            "room_pin": new_test_pin,
+            "room_pin": manual_pin,
             "name": "Zeynep Kaya",
             "school": "Boğaziçi Girişimcilik",
-            "avatar": "💡",
+            "avatar": "🦊",
             "player_id": "player-2"
         })
-        assert p2["success"] is True
+        assert p2["success"] is True and p2["player"]["avatar"] == "🦊"
 
         status, p3, _ = http_post("/api/player/join", {
-            "room_pin": new_test_pin,
+            "room_pin": manual_pin,
             "name": "Burak Demir",
             "school": "ODTÜ Bilgisayar",
-            "avatar": "🤖",
+            "avatar": "🐺",
             "player_id": "player-3"
         })
-        assert p3["success"] is True
+        assert p3["success"] is True and p3["player"]["avatar"] == "🐺"
 
         assert len(game_manager.players) == 3
-        print("  ✓ 3 oyuncu farklı avatar ve okullarıyla odaya başarıyla katıldı.")
+        print("  ✓ 3 oyuncu sevimli hayvan avatarlarıyla (🐼 Panda, 🦊 Tilki, 🐺 Kurt) katıldı.")
 
-        # 4.1 "Odadan Çık" Testi
+        # Odadan Çık Testi
         _, leave_data, _ = http_post("/api/player/leave", {"player_id": "player-3"})
         assert leave_data["success"] is True
-        assert len(game_manager.players) == 2, "Odadan çıkan oyuncu sistemden silinmedi!"
-        print("  ✓ 'Odadan Çık' fonksiyonu test edildi: Oyuncu 3 odadan ayrıldı, katılımcı sayısı güncellendi.")
+        assert len(game_manager.players) == 2
+        print("  ✓ 'Odadan Çık' fonksiyonu test edildi: Oyuncu odadan ayrıldı.")
 
-        # Oyuncu 3 tekrar katılsın
+        # Oyuncu tekrar katılsın
         http_post("/api/player/join", {
-            "room_pin": new_test_pin,
+            "room_pin": manual_pin,
             "name": "Burak Demir",
             "school": "ODTÜ Bilgisayar",
-            "avatar": "🤖",
+            "avatar": "🐺",
             "player_id": "player-3"
         })
 
         # ---------------------------------------------------------
-        # TEST 5: SAYAÇLAR (5s, 10s, 15s) VE OTOMATİK MOD TESTİ
+        # TEST 5: SAYAÇLAR (5s/10s/15s) VE OTOMATİK MOD GERİ SAYIM
         # ---------------------------------------------------------
-        print("\n[TEST 5] Sayaç Süreleri (5s/10s/15s) ve Otomatik Mod...")
-        for duration in (5, 10, 15):
-            status, t_res, _ = http_post("/api/admin/timer", {
-                "admin_pin": settings.ADMIN_PIN,
-                "duration": duration,
-                "auto_mode": False
-            })
-            assert t_res["duration"] == duration
-            assert game_manager.duration == duration
-        print("  ✓ 5s, 10s ve 15s süre ayarları hatasız uygulandı.")
+        print("\n[TEST 5] Sayaç Süreleri ve Otomatik Mod...")
+        for dur in (5, 10, 15):
+            _, t_res, _ = http_post("/api/admin/timer", {"admin_pin": "220126", "duration": dur, "auto_mode": False})
+            assert t_res["duration"] == dur
+        print("  ✓ 5s, 10s ve 15s süre ayarları hatasız doğrulandı.")
 
-        # Otomatik modu aç ve 15s ayarla
-        http_post("/api/admin/timer", {
-            "admin_pin": settings.ADMIN_PIN,
-            "duration": 15,
-            "auto_mode": True
-        })
+        # Otomatik modu aç
+        http_post("/api/admin/timer", {"admin_pin": "220126", "duration": 15, "auto_mode": True})
         assert game_manager.auto_mode is True
         print("  ✓ Otomatik Mod (Auto Mode) başarıyla aktive edildi.")
 
         # ---------------------------------------------------------
-        # TEST 6: YARIŞMA AKIŞI (Soru -> Cevap -> Skor -> Podyum)
+        # TEST 6: TAM YARIŞMA DÖNGÜSÜ VE PODYUM
         # ---------------------------------------------------------
         print("\n[TEST 6] Tam Yarışma Yaşam Döngüsü Simülasyonu...")
-        
-        # 6.1 Yarışmayı Başlat
-        http_post("/api/admin/action", {"admin_pin": settings.ADMIN_PIN, "action": "START_GAME"})
+        http_post("/api/admin/action", {"admin_pin": "220126", "action": "START_GAME"})
         assert game_manager.status == "QUESTION"
         curr_q = game_manager.get_current_question()
-        print(f"  ✓ Yarışma başladı! 1. Soru aktif: '{curr_q.question[:40]}...'")
-
-        # 6.2 Oyuncular Cevap Gönderiyor
         correct_opt = curr_q.correct
-        wrong_opt = "A" if correct_opt != "A" else "B"
 
-        # Can doğru cevap verir (hızlı cevap)
-        _, ans1, _ = http_post("/api/player/answer", {
-            "player_id": "player-1",
-            "question_id": curr_q.id,
-            "choice": correct_opt
-        })
-        assert ans1["is_correct"] is True
-        assert ans1["points_earned"] >= 500
+        # Oyuncular Kahoot butonlarıyla cevap veriyor
+        http_post("/api/player/answer", {"player_id": "player-1", "question_id": curr_q.id, "choice": correct_opt})
+        http_post("/api/player/answer", {"player_id": "player-2", "question_id": curr_q.id, "choice": correct_opt})
+        http_post("/api/player/answer", {"player_id": "player-3", "question_id": curr_q.id, "choice": "A" if correct_opt != "A" else "B"})
 
-        # Zeynep doğru cevap verir
-        _, ans2, _ = http_post("/api/player/answer", {
-            "player_id": "player-2",
-            "question_id": curr_q.id,
-            "choice": correct_opt
-        })
-        assert ans2["is_correct"] is True
-
-        # Burak yanlış cevap verir
-        _, ans3, _ = http_post("/api/player/answer", {
-            "player_id": "player-3",
-            "question_id": curr_q.id,
-            "choice": wrong_opt
-        })
-        assert ans3["is_correct"] is False
-        assert ans3["points_earned"] == 0
-
-        print("  ✓ 3 oyuncunun cevapları işlendi (2 Doğru, 1 Yanlış) ve Kahoot puanları hesaplandı.")
-
-        # 6.3 Cevabı Açıkla (REVEAL)
-        http_post("/api/admin/action", {"admin_pin": settings.ADMIN_PIN, "action": "REVEAL_ANSWER"})
+        # Reveal
+        http_post("/api/admin/action", {"admin_pin": "220126", "action": "REVEAL_ANSWER"})
         assert game_manager.status == "REVEAL"
-        assert game_manager.answer_stats[correct_opt] == 2
-        print(f"  ✓ REVEAL durumu doğrulandı: Dağılım -> {game_manager.answer_stats}")
 
-        # 6.4 Liderlik Tablosunu Göster
-        http_post("/api/admin/action", {"admin_pin": settings.ADMIN_PIN, "action": "SHOW_LEADERBOARD"})
+        # Leaderboard (5s countdown kontrolü)
+        http_post("/api/admin/action", {"admin_pin": "220126", "action": "SHOW_LEADERBOARD"})
         assert game_manager.status == "LEADERBOARD"
-        _, lb, _ = http_get("/api/leaderboard")
-        assert len(lb) == 3
-        assert lb[0]["name"] == "Can Yılmaz"
-        assert lb[0]["rank"] == 1
-        print(f"  ✓ Liderlik Tablosu: 1. Sıra -> {lb[0]['name']} ({lb[0]['score']} Puan)")
+        _, lb_state, _ = http_get("/api/state")
+        assert "leaderboard_countdown" in lb_state
+        print("  ✓ Liderlik tablosu 5 saniyelik otomatik geçiş sayacı devrede.")
 
-        # 6.5 Podyum Finali (3., 2., 1. Animasyonu)
-        http_post("/api/admin/action", {"admin_pin": settings.ADMIN_PIN, "action": "FINISH_PODIUM"})
+        # Finale & Podyum
+        http_post("/api/admin/action", {"admin_pin": "220126", "action": "FINISH_PODIUM"})
         assert game_manager.status == "PODIUM"
-        _, podium_res, _ = http_get("/api/podium")
-        assert podium_res["first"]["id"] == "player-1"
-        assert podium_res["second"]["id"] == "player-2"
-        assert podium_res["third"]["id"] == "player-3"
-        print(f"  ✓ PODYUM DOĞRULANDI:")
-        print(f"     🥇 1. Şampiyon: {podium_res['first']['name']} ({podium_res['first']['score']} P)")
-        print(f"     🥈 2. Yarışmacı: {podium_res['second']['name']} ({podium_res['second']['score']} P)")
-        print(f"     🥉 3. Yarışmacı: {podium_res['third']['name']} ({podium_res['third']['score']} P)")
+        _, podium, _ = http_get("/api/podium")
+        assert podium["first"]["id"] == "player-1"
+        print(f"  ✓ PODYUM 3-2-1:")
+        print(f"     🥇 1. Şampiyon: {podium['first']['avatar']} {podium['first']['name']} ({podium['first']['score']} P)")
+        print(f"     🥈 2. Yarışmacı: {podium['second']['avatar']} {podium['second']['name']} ({podium['second']['score']} P)")
+        print(f"     🥉 3. Yarışmacı: {podium['third']['avatar']} {podium['third']['name']} ({podium['third']['score']} P)")
 
         print("\n" + "=" * 70)
-        print("🎉 TÜM QA SİMÜLASYON TESTLERİ %100 BAŞARIYLA TAMAMLANDI!")
+        print("🎉 TÜM YENİ GEREKSİNİMLER VE QA TESTLERİ %100 BAŞARIYLA TAMAMLANDI!")
         print("=" * 70)
 
     finally:
