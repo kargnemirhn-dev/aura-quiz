@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --kahoot-red: #e21b3c;
+    --kahoot-blue: #1368ce;
+    --kahoot-yellow: #eab308; /* Tailwind yellow-500 */
+    --kahoot-green: #26890c;
+}
+
+body {
+    font-family: 'Outfit', 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+/* Horizontal Smooth Marquee for Participants */
+@keyframes marqueeScroll {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+}
+
+.marquee-container {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.marquee-content {
+    display: inline-flex;
+    gap: 1rem;
+    animation: marqueeScroll 25s linear infinite;
+}
+
+.marquee-content:hover {
+    animation-play-state: paused;
+}
+
+/* Kahoot Mobile Buttons */
+.kahoot-btn {
+    transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25);
+}
+
+.kahoot-btn:active:not(:disabled) {
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.kahoot-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: grayscale(20%);
+}
+
+/* C-Option Yellow specific rule */
+.bg-kahoot-c {
+    background-color: #eab308 !important; /* bg-yellow-500 */
+}
+
+/* Podium Animations */
+@keyframes podiumRise {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.podium-1 {
+    animation: podiumRise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+    opacity: 0;
+}
+
+.podium-2 {
+    animation: podiumRise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+    opacity: 0;
+}
+
+.podium-3 {
+    animation: podiumRise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.0s forwards;
+    opacity: 0;
+}
+
+/* Glowing Neon Elements */
+.glow-gold {
+    box-shadow: 0 0 35px rgba(234, 179, 8, 0.45);
+}
+
+.glow-silver {
+    box-shadow: 0 0 25px rgba(203, 213, 225, 0.35);
+}
+
+.glow-bronze {
+    box-shadow: 0 0 25px rgba(217, 119, 6, 0.35);
+}
+
+/* Pulse Timer */
+@keyframes pulseFast {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+.pulse-urgent {
+    animation: pulseFast 0.6s infinite ease-in-out;
+}
+
+/* Smooth Fade In */
+.fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}{{ title }} | {{ subtitle }}{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        },
+                        kahoot: {
+                            red: '#e21b3c',
+                            blue: '#1368ce',
+                            yellow: '#eab308', /* Tailwind yellow-500 */
+                            green: '#26890c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Firebase JS SDK (Compat mode for ultra-reliable zero-build browser use) -->
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full flex flex-col overflow-x-hidden antialiased bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+    {% block content %}{% endblock %}
+
+    <!-- Procedural Audio Synthesizer -->
+    <script src="/static/js/audio.js"></script>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Firebase Web Client Config (Injected safely from server)
+        window.FIREBASE_CONFIG = {{ firebase_config | tojson if firebase_config else '{}' }};
+        if (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.enabled && window.FIREBASE_CONFIG.apiKey) {
+            try {
+                firebase.initializeApp(window.FIREBASE_CONFIG);
+                window.firestoreDb = firebase.firestore();
+                console.log("[Aura] Firebase Web SDK successfully connected!");
+            } catch (err) {
+                console.warn("[Aura] Firebase client init skipped/fallback:", err);
+            }
+        }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

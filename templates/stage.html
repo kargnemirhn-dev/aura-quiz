@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Sahne Ekranı | {{ title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-full flex flex-col justify-between p-6 lg:p-10 max-w-[1700px] mx-auto w-full relative">
+    
+    <!-- Top Stage Bar -->
+    <header class="flex items-center justify-between bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl px-8 py-5 shadow-2xl">
+        <div class="flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black tracking-tight text-white">AI ERA ZİRVESİ</h1>
+                <p class="text-xs uppercase tracking-widest text-indigo-400 font-bold">Aura Canlı Bilgi Yarışması</p>
+            </div>
+        </div>
+
+        <!-- Center Room PIN & Join Info -->
+        <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-3 bg-slate-950/80 border border-indigo-500/40 px-6 py-2.5 rounded-2xl shadow-inner">
+                <span class="text-xs uppercase tracking-wider font-extrabold text-slate-400">ODA PIN:</span>
+                <span class="font-mono text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-pink-300" id="stage-pin-display">{{ room_pin }}</span>
+            </div>
+
+            <!-- Participant Count Badge -->
+            <div class="flex items-center space-x-2 bg-slate-950/80 border border-slate-800 px-5 py-2.5 rounded-2xl">
+                <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
+                <span class="text-lg font-black text-white" id="stage-players-count">0</span>
+                <span class="text-xs text-slate-400 font-semibold uppercase">Katılımcı</span>
+            </div>
+        </div>
+
+        <!-- Fullscreen & Sound Controls -->
+        <div class="flex items-center space-x-3">
+            <button id="btn-fullscreen" onclick="toggleFullscreen()" class="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all">
+                <i data-lucide="maximize" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- STAGE VIEWS CONTAINER -->
+    <main class="my-auto py-8 flex flex-col items-center justify-center w-full min-h-[640px]">
+        
+        <!-- 1. LOBBY VIEW -->
+        <div id="view-lobby" class="w-full max-w-5xl flex flex-col items-center text-center fade-in">
+            <div class="bg-slate-900/90 border border-slate-800 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl flex flex-col items-center w-full max-w-2xl relative overflow-hidden">
+                <div class="absolute -top-24 -left-24 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-60 h-60 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <span class="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-1.5 rounded-full text-sm font-bold mb-6">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Yarışma Başlamak Üzere</span>
+                </span>
+
+                <h2 class="text-3xl sm:text-4xl font-black text-white mb-2">Telefonunuzla Katılın!</h2>
+                <p class="text-slate-400 text-base mb-6">QR kodu okutun veya tarayıcınızda <span class="font-bold text-white">/play</span> adresine girin.</p>
+
+                <!-- Interactive Clickable QR Code -->
+                <div class="relative group cursor-pointer" onclick="openQrModal()">
+                    <div id="lobby-qrcode" class="p-5 bg-white rounded-3xl shadow-2xl shadow-indigo-500/20 transition-transform group-hover:scale-105"></div>
+                    <div class="absolute inset-0 bg-indigo-900/60 backdrop-blur-sm rounded-3xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all">
+                        <i data-lucide="zoom-in" class="w-10 h-10 text-white mb-2"></i>
+                        <span class="text-xs font-black uppercase tracking-wider text-white bg-indigo-600 px-3 py-1 rounded-full">QR Kodu Büyüt</span>
+                    </div>
+                </div>
+
+                <!-- Big QR Modal Button -->
+                <button onclick="openQrModal()" class="mt-6 inline-flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 font-bold text-sm bg-indigo-500/10 hover:bg-indigo-500/20 px-5 py-2.5 rounded-xl border border-indigo-500/20 transition-all">
+                    <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                    <span>Tüm Salona Göster (QR Büyüt)</span>
+                </button>
+            </div>
+
+            <!-- Yatay Kayan Katılımcı Kartları (Avatar, İsim, Okul) -->
+            <div class="w-full mt-12">
+                <div class="flex items-center justify-between mb-4 px-4">
+                    <div class="flex items-center space-x-2 text-slate-400 font-bold text-sm">
+                        <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Hazır Olan Yarışmacılar</span>
+                    </div>
+                    <span class="text-xs text-slate-500 font-medium" id="marquee-status">Katılımcılar bekleniyor...</span>
+                </div>
+
+                <div class="marquee-container bg-slate-900/50 border border-slate-800/80 rounded-2xl py-4 px-2">
+                    <div class="marquee-content" id="participants-marquee">
+                        <!-- Dynamic Player Cards rendered here -->
+                        <div class="inline-flex items-center space-x-3 bg-slate-800/80 border border-slate-700/80 px-4 py-2 rounded-xl text-slate-400 text-sm">
+                            <span>🚀 Katılımcı kartları burada akacak</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. QUESTION ACTIVE VIEW -->
+        <div id="view-question" class="w-full max-w-6xl flex flex-col items-center hidden fade-in">
+            <!-- Question Top Meta -->
+            <div class="flex items-center justify-between w-full mb-6 px-4">
+                <div class="bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 px-5 py-2 rounded-2xl font-black text-lg">
+                    Soru <span id="q-number">1</span> / <span id="q-total">30</span>
+                </div>
+
+                <!-- Timer Circle / Badge -->
+                <div class="flex items-center space-x-3">
+                    <div id="q-timer-box" class="w-16 h-16 rounded-full bg-slate-900 border-4 border-indigo-500 flex items-center justify-center shadow-lg">
+                        <span id="q-timer" class="text-2xl font-black text-white">15</span>
+                    </div>
+                </div>
+
+                <!-- Live Answers Counter -->
+                <div class="bg-slate-900 border border-slate-800 px-5 py-2 rounded-2xl text-slate-300 font-bold flex items-center space-x-2">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+                    <span><span id="q-answers-count" class="text-emerald-400 font-black text-xl">0</span> / <span id="q-total-players">0</span> Cevap</span>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="w-full bg-slate-900/95 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 mb-8 shadow-2xl text-center">
+                <h3 id="q-text" class="text-2xl sm:text-4xl font-extrabold text-white leading-relaxed">
+                    Soru metni yükleniyor...
+                </h3>
+            </div>
+
+            <!-- 4 Kahoot Options Grid (Notice Option C with exact bg-yellow-500) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+                <!-- A: Red Triangle -->
+                <div id="stage-opt-A" class="bg-red-600 rounded-3xl p-6 sm:p-8 flex items-center space-x-6 text-white shadow-xl transition-all">
+                    <div class="w-16 h-16 rounded-2xl bg-black/20 flex items-center justify-center text-3xl font-black flex-shrink-0">
+                        🔺
+                    </div>
+                    <span id="stage-text-A" class="text-xl sm:text-2xl font-bold flex-1 leading-snug">A Şıkkı</span>
+                </div>
+
+                <!-- B: Blue Square -->
+                <div id="stage-opt-B" class="bg-blue-600 rounded-3xl p-6 sm:p-8 flex items-center space-x-6 text-white shadow-xl transition-all">
+                    <div class="w-16 h-16 rounded-2xl bg-black/20 flex items-center justify-center text-3xl font-black flex-shrink-0">
+                        🔷
+                    </div>
+                    <span id="stage-text-B" class="text-xl sm:text-2xl font-bold flex-1 leading-snug">B Şıkkı</span>
+                </div>
+
+                <!-- C: Yellow Circle (User explicitly requested bg-yellow-500) -->
+                <div id="stage-opt-C" class="bg-yellow-500 rounded-3xl p-6 sm:p-8 flex items-center space-x-6 text-slate-950 shadow-xl transition-all">
+                    <div class="w-16 h-16 rounded-2xl bg-black/20 flex items-center justify-center text-3xl font-black flex-shrink-0">
+                        🟡
+                    </div>
+                    <span id="stage-text-C" class="text-xl sm:text-2xl font-bold flex-1 leading-snug">C Şıkkı</span>
+                </div>
+
+                <!-- D: Green Star -->
+                <div id="stage-opt-D" class="bg-green-600 rounded-3xl p-6 sm:p-8 flex items-center space-x-6 text-white shadow-xl transition-all">
+                    <div class="w-16 h-16 rounded-2xl bg-black/20 flex items-center justify-center text-3xl font-black flex-shrink-0">
+                        🟢
+                    </div>
+                    <span id="stage-text-D" class="text-xl sm:text-2xl font-bold flex-1 leading-snug">D Şıkkı</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. REVEAL VIEW (Stats & Correct Answer) -->
+        <div id="view-reveal" class="w-full max-w-5xl flex flex-col items-center hidden fade-in">
+            <div class="w-full bg-slate-900/90 border border-slate-800 rounded-[2.5rem] p-8 sm:p-10 mb-8 text-center shadow-2xl">
+                <span class="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-2 block">Doğru Cevap Açıklandı</span>
+                <h3 id="reveal-q-text" class="text-2xl sm:text-3xl font-extrabold text-white mb-6"></h3>
+
+                <!-- Correct Answer Banner -->
+                <div id="reveal-correct-banner" class="p-6 rounded-2xl flex items-center justify-center space-x-4 text-2xl font-black text-white shadow-xl mb-6">
+                    <!-- Dynamic banner content -->
+                </div>
+
+                <p id="reveal-explanation" class="text-slate-300 text-base max-w-2xl mx-auto italic"></p>
+            </div>
+
+            <!-- Distribution Bar Chart -->
+            <div class="w-full bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl">
+                <h4 class="text-sm font-bold text-slate-400 mb-4 text-left">Katılımcı Cevap Dağılımı</h4>
+                <div class="grid grid-cols-4 gap-4 h-48 items-end pt-4">
+                    <!-- Bar A -->
+                    <div class="flex flex-col items-center h-full justify-end">
+                        <span id="stat-count-A" class="text-lg font-black text-white mb-1">0</span>
+                        <div id="stat-bar-A" class="w-full bg-red-600 rounded-t-xl transition-all duration-700 min-h-[12px]" style="height: 10%;"></div>
+                        <span class="text-sm font-bold text-slate-300 mt-2">🔺 A</span>
+                    </div>
+
+                    <!-- Bar B -->
+                    <div class="flex flex-col items-center h-full justify-end">
+                        <span id="stat-count-B" class="text-lg font-black text-white mb-1">0</span>
+                        <div id="stat-bar-B" class="w-full bg-blue-600 rounded-t-xl transition-all duration-700 min-h-[12px]" style="height: 10%;"></div>
+                        <span class="text-sm font-bold text-slate-300 mt-2">🔷 B</span>
+                    </div>
+
+                    <!-- Bar C (bg-yellow-500) -->
+                    <div class="flex flex-col items-center h-full justify-end">
+                        <span id="stat-count-C" class="text-lg font-black text-white mb-1">0</span>
+                        <div id="stat-bar-C" class="w-full bg-yellow-500 rounded-t-xl transition-all duration-700 min-h-[12px]" style="height: 10%;"></div>
+                        <span class="text-sm font-bold text-slate-300 mt-2">🟡 C</span>
+                    </div>
+
+                    <!-- Bar D -->
+                    <div class="flex flex-col items-center h-full justify-end">
+                        <span id="stat-count-D" class="text-lg font-black text-white mb-1">0</span>
+                        <div id="stat-bar-D" class="w-full bg-green-600 rounded-t-xl transition-all duration-700 min-h-[12px]" style="height: 10%;"></div>
+                        <span class="text-sm font-bold text-slate-300 mt-2">🟢 D</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. LEADERBOARD VIEW -->
+        <div id="view-leaderboard" class="w-full max-w-4xl flex flex-col items-center hidden fade-in">
+            <div class="text-center mb-8">
+                <span class="inline-flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-5 py-1.5 rounded-full text-sm font-extrabold mb-3">
+                    <i data-lucide="trophy" class="w-4 h-4"></i>
+                    <span>GÜNCEL SIRALAMA</span>
+                </span>
+                <h3 class="text-3xl sm:text-4xl font-black text-white">Liderlik Tablosu</h3>
+            </div>
+
+            <div id="leaderboard-list" class="w-full space-x-0 space-y-3">
+                <!-- Top 5/10 players dynamically populated -->
+            </div>
+        </div>
+
+        <!-- 5. PODIUM VIEW (Yarışma Sonu 3., 2., 1. Podyum Animasyonu) -->
+        <div id="view-podium" class="w-full max-w-5xl flex flex-col items-center hidden fade-in">
+            <div class="text-center mb-8">
+                <span class="inline-flex items-center space-x-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-5 py-2 rounded-full text-sm font-black mb-3">
+                    <i data-lucide="crown" class="w-4 h-4 text-amber-400"></i>
+                    <span>ZİRVE ŞAMPİYONLARI</span>
+                </span>
+                <h3 class="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500">
+                    Büyük Podyum
+                </h3>
+            </div>
+
+            <!-- 3D Styled Podium Pedestals -->
+            <div class="w-full grid grid-cols-3 gap-4 sm:gap-8 items-end max-w-3xl min-h-[420px] px-4 pt-12">
+                
+                <!-- 2nd Place (Left - Silver) -->
+                <div class="flex flex-col items-center podium-2">
+                    <div id="podium-2-avatar" class="text-5xl sm:text-6xl mb-3 filter drop-shadow-lg">🥈</div>
+                    <span id="podium-2-name" class="font-extrabold text-white text-base sm:text-xl truncate max-w-full">2. Yarışmacı</span>
+                    <span id="podium-2-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Üniversite</span>
+                    <span id="podium-2-score" class="text-sm font-black text-slate-300 bg-slate-800/80 px-3 py-1 rounded-full mb-3">0 Puan</span>
+                    
+                    <div class="w-full h-44 sm:h-56 bg-gradient-to-t from-slate-800 to-slate-700 rounded-t-3xl border-t-4 border-slate-400 flex flex-col items-center justify-center glow-silver shadow-2xl">
+                        <span class="text-4xl sm:text-6xl font-black text-slate-300">2</span>
+                    </div>
+                </div>
+
+                <!-- 1st Place (Center - Gold Champion) -->
+                <div class="flex flex-col items-center podium-1">
+                    <div class="relative">
+                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl animate-bounce">👑</div>
+                        <div id="podium-1-avatar" class="text-6xl sm:text-7xl mb-3 filter drop-shadow-2xl">🏆</div>
+                    </div>
+                    <span id="podium-1-name" class="font-black text-amber-300 text-lg sm:text-2xl truncate max-w-full">1. Şampiyon</span>
+                    <span id="podium-1-school" class="text-xs text-amber-400/80 mb-2 truncate max-w-full">Üniversite</span>
+                    <span id="podium-1-score" class="text-base font-black text-amber-950 bg-amber-400 px-4 py-1 rounded-full mb-3 shadow-lg">0 Puan</span>
+
+                    <div class="w-full h-64 sm:h-80 bg-gradient-to-t from-amber-700 via-amber-600 to-yellow-500 rounded-t-3xl border-t-4 border-yellow-200 flex flex-col items-center justify-center glow-gold shadow-2xl">
+                        <span class="text-6xl sm:text-8xl font-black text-amber-950">1</span>
+                    </div>
+                </div>
+
+                <!-- 3rd Place (Right - Bronze) -->
+                <div class="flex flex-col items-center podium-3">
+                    <div id="podium-3-avatar" class="text-5xl sm:text-6xl mb-3 filter drop-shadow-lg">🥉</div>
+                    <span id="podium-3-name" class="font-extrabold text-white text-base sm:text-xl truncate max-w-full">3. Yarışmacı</span>
+                    <span id="podium-3-school" class="text-xs text-slate-400 mb-2 truncate max-w-full">Üniversite</span>
+                    <span id="podium-3-score" class="text-sm font-black text-amber-500 bg-slate-800/80 px-3 py-1 rounded-full mb-3">0 Puan</span>
+
+                    <div class="w-full h-36 sm:h-44 bg-gradient-to-t from-amber-950 to-amber-900 rounded-t-3xl border-t-4 border-amber-600 flex flex-col items-center justify-center glow-bronze shadow-2xl">
+                        <span class="text-4xl sm:text-6xl font-black text-amber-500">3</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FULLSCREEN ENLARGED QR MODAL (Auditorium Zoom) -->
+    <div id="modal-qr" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 sm:p-12 max-w-xl w-full flex flex-col items-center text-center relative shadow-2xl">
+            <!-- Close Button -->
+            <button onclick="closeQrModal()" class="absolute top-5 right-5 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+
+            <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
+                Büyük Salon Tarama Modu
+            </span>
+
+            <h3 class="text-2xl sm:text-3xl font-black text-white mb-2">Hemen Katılın!</h3>
+            <p class="text-slate-400 text-sm mb-6">Kameranızı açıp aşağıdaki dev QR kodu uzaktan taratabilirsiniz.</p>
+
+            <!-- Large QR Target -->
+            <div id="modal-qrcode-target" class="p-6 bg-white rounded-3xl shadow-2xl mb-6"></div>
+
+            <div class="flex items-center space-x-3 bg-slate-950 border border-slate-800 px-6 py-3 rounded-2xl">
+                <span class="text-sm uppercase font-bold text-slate-400">Oda Kodu:</span>
+                <span class="text-3xl font-mono font-black text-white" id="modal-pin-display">{{ room_pin }}</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/stage.js"></script>
+{% endblock %}
