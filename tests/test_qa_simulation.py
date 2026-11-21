@@ -18,11 +18,11 @@ from aura.security import security_service
 
 BASE_URL = "http://127.0.0.1:8089"
 
-def http_get(path: str):
+def http_get(path: str, timeout: int = 45):
     url = f"{BASE_URL}{path}"
     req = urllib.request.Request(url, method="GET")
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             content_type = resp.headers.get("Content-Type", "")
             raw = resp.read()
             try:
@@ -38,12 +38,12 @@ def http_get(path: str):
             data = None
         return e.code, data, raw, e.headers.get("Content-Type", "")
 
-def http_post(path: str, payload: dict):
+def http_post(path: str, payload: dict, timeout: int = 60):
     url = f"{BASE_URL}{path}"
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read()
             try:
                 data = json.loads(raw.decode("utf-8"))
@@ -461,11 +461,31 @@ def run_comprehensive_qa_test():
         print("  ✓ Soru süresi (25s) ve geçiş süresi (10s) bağımsız olarak ayarlandı.")
 
         # ---------------------------------------------------------------------
-        # 11. UÇTAN UCA QA SİMÜLASYON TESTİ (ADMIN, SAHNE, OYUNCU)
+        # 11. UÇTAN UCA TAM AKIŞ VE YENİ ÖZELLİKLER SİMÜLASYONU
+        # (Okullar Sıralaması, Özel Temalar, 5-Sayım Animasyonu, Dinamik Hız Puanı)
         # ---------------------------------------------------------------------
-        print("\n[GEREKSİNİM 11] Uçtan Uca Tam Akış Simülasyonu Testi...")
+        print("\n[GEREKSİNİM 11] Uçtan Uca Tam Akış ve Yeni Özellikler Simülasyonu...")
         http_post("/api/admin/action", {"admin_pin": admin_pin, "action": "RESET_ROOM"})
 
+        # Test 11.1: Özel Tema Seçenekleri Testi
+        print("  Testing: Özel Tema Seçenekleri & State Senkronizasyonu...")
+        st_theme, theme_res, _ = http_post("/api/admin/theme", {
+            "admin_pin": admin_pin,
+            "theme": "cyberpunk"
+        })
+        assert st_theme == 200 and theme_res["theme"] == "cyberpunk"
+        assert game_manager.theme == "cyberpunk"
+
+        st_state, state_data, _, _ = http_get("/api/state")
+        assert st_state == 200 and state_data["theme"] == "cyberpunk"
+        print("  ✓ Cyberpunk teması backend ve public state üzerinde başarıyla doğrulandı.")
+
+        # Revert theme test to default
+        http_post("/api/admin/theme", {"admin_pin": admin_pin, "theme": "default"})
+        assert game_manager.theme == "default"
+        print("  ✓ Varsayılan Karanlık Moda (Orijinal) geri dönüş başarıyla doğrulandı.")
+
+        # Join players from different official schools
         http_post("/api/player/join", {
             "room_pin": active_pin,
             "name": "Zeynep Kaya",
@@ -481,12 +501,49 @@ def run_comprehensive_qa_test():
             "player_id": "player-2"
         })
 
+        # Test 11.2: Kahoot Tarzı 5'ten Geriye Sayım Animasyonu Testi
+        print("  Testing: Kahoot Tarzı 5'ten Geriye Sayım Animasyonu...")
         http_post("/api/admin/action", {"admin_pin": admin_pin, "action": "START_GAME"})
-        assert game_manager.status == "QUESTION"
+        assert game_manager.status == "COUNTDOWN", f"Expected COUNTDOWN, got: {game_manager.status}"
+        assert game_manager.countdown_remaining >= 1
+        st_state_cd, state_cd, _, _ = http_get("/api/state")
+        assert state_cd["status"] == "COUNTDOWN"
+        assert state_cd["countdown_remaining"] >= 1
+        print("  ✓ 'START_GAME' aksiyonunda COUNTDOWN durumuna geçiş ve senkronizasyon doğrulandı.")
 
+        # Transition to QUESTION
+        http_post("/api/admin/action", {"admin_pin": admin_pin, "action": "NEXT_QUESTION"})
+        assert game_manager.status == "QUESTION"
+        print("  ✓ Soru aşamasına (QUESTION) geçiş doğrulandı.")
+
+        # Test 11.3: Süre Faktörüne Dayalı Dinamik Puanlama Testi
+        print("  Testing: Süre Faktörüne Dayalı Dinamik Puanlama (Base 500 + Hız Bonusu)...")
         curr_q = game_manager.get_current_question()
-        http_post("/api/player/answer", {"player_id": "player-1", "question_id": curr_q.id, "choice": curr_q.correct})
+        st_ans1, ans1_data, _ = http_post("/api/player/answer", {
+            "player_id": "player-1",
+            "question_id": curr_q.id,
+            "choice": curr_q.correct
+        })
+        assert st_ans1 == 200 and ans1_data["is_correct"] is True
+        assert ans1_data["base_points"] == 500, f"Expected 500 base, got {ans1_data.get('base_points')}"
+        assert ans1_data["speed_bonus"] > 0, "Hız bonusu hesaplanamadı!"
+        assert ans1_data["points_earned"] == ans1_data["base_points"] + ans1_data["speed_bonus"]
+        print(f"  ✓ Dinamik puanlama doğrulandı: Temel={ans1_data['base_points']}, Hız Bonusu={ans1_data['speed_bonus']} (Toplam: {ans1_data['points_earned']})")
+
         http_post("/api/player/answer", {"player_id": "player-2", "question_id": curr_q.id, "choice": curr_q.correct})
+
+        # Test 11.4: Okullar Liderlik Tablosu API Testi
+        print("  Testing: Okullar Liderlik Tablosu API & Hesaplamaları...")
+        st_schools, schools_res, _, _ = http_get("/api/leaderboard/schools")
+        assert st_schools == 200
+        schools_list = schools_res["schools"]
+        assert len(schools_list) == 6
+        halil_school = next((s for s in schools_list if s["school"] == "Halil İnalcık Anadolu Lisesi"), None)
+        assert halil_school is not None
+        assert halil_school["total_score"] > 0
+        assert halil_school["player_count"] == 1
+        assert halil_school["rank"] == 1
+        print(f"  ✓ Okullar Liderlik Tablosu doğrulandı: 1. Sırada {halil_school['school']} ({halil_school['total_score']} Puan)")
 
         http_post("/api/admin/action", {"admin_pin": admin_pin, "action": "REVEAL_ANSWER"})
         assert game_manager.status == "REVEAL"

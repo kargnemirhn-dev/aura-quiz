@@ -296,6 +296,13 @@ function escapeHtml(str) {
 function applyState(state) {
     if (!state) return;
 
+    // Apply Live Theme Sync
+    if (state.theme) {
+        document.body.className = "theme-" + state.theme;
+    } else {
+        document.body.className = "theme-default";
+    }
+
     // Check if room PIN was changed by Admin
     if (state.room_pin && state.room_pin !== currentRoomPin) {
         updateQrCodes(state.room_pin);
@@ -308,8 +315,42 @@ function applyState(state) {
         spawnReaction(state.last_reaction.emoji, sender);
     }
 
+    // Update schools leaderboard if data present
+    if (state.schools_leaderboard) {
+        renderSchoolsLeaderboard(state.schools_leaderboard);
+    }
+
     const stageCount = document.getElementById("stage-players-count");
     if (stageCount) stageCount.innerText = state.participants_count || 0;
+
+    // Handle 5-to-1 Fullscreen Countdown
+    const countdownOverlay = document.getElementById("stage-countdown-overlay");
+    const cdNumberEl = document.getElementById("countdown-stage-number");
+    const cdTitleEl = document.getElementById("countdown-stage-title");
+    const cdSubEl = document.getElementById("countdown-stage-subtitle");
+
+    if (state.status === "COUNTDOWN") {
+        if (countdownOverlay) countdownOverlay.classList.remove("hidden");
+        const startTs = state.countdown_start_timestamp;
+        const now = Date.now() / 1000;
+        const remaining = Math.max(0, Math.ceil(5 - (startTs > 0 ? (now - startTs) : 0)));
+        if (cdNumberEl) {
+            if (remaining > 0) {
+                cdNumberEl.innerText = remaining;
+                if (cdTitleEl) cdTitleEl.innerText = "Yarışma Başlıyor!";
+                if (cdSubEl) cdSubEl.innerText = "Hazırlanın, ilk soru ekrana geliyor...";
+                if (remaining <= 3) {
+                    try { window.soundManager.playTick(); } catch(e) {}
+                }
+            } else {
+                cdNumberEl.innerText = "🚀";
+                if (cdTitleEl) cdTitleEl.innerText = "BAŞLADI!";
+                if (cdSubEl) cdSubEl.innerText = "İlk soru ekrana yansıtılıyor...";
+            }
+        }
+    } else {
+        if (countdownOverlay) countdownOverlay.classList.add("hidden");
+    }
 
     const views = {
         LOBBY: document.getElementById("view-lobby"),
@@ -564,6 +605,49 @@ async function openFullLeaderboardModal() {
 
 function closeFullLeaderboardModal() {
     const modal = document.getElementById("modal-full-leaderboard");
+    if (modal) modal.classList.add("hidden");
+    window.soundManager.playClick();
+}
+
+// Schools Leaderboard Modal & Rendering
+function renderSchoolsLeaderboard(schools) {
+    const tbody = document.getElementById("schools-leaderboard-tbody");
+    if (!tbody || !schools) return;
+    tbody.innerHTML = schools.map(s => `
+        <tr class="hover:bg-slate-800/60 transition-colors ${s.rank === 1 ? 'bg-amber-500/10' : ''}">
+            <td class="p-3.5 font-mono font-black text-center ${s.rank === 1 ? 'text-amber-400 text-base' : s.rank === 2 ? 'text-slate-300' : s.rank === 3 ? 'text-amber-600' : 'text-slate-500'}">
+                ${s.rank === 1 ? '🥇 1' : s.rank === 2 ? '🥈 2' : s.rank === 3 ? '🥉 3' : '#' + s.rank}
+            </td>
+            <td class="p-3.5 font-bold text-white text-sm">${escapeHtml(s.school)}</td>
+            <td class="p-3.5 text-center font-mono font-semibold text-indigo-300">${s.player_count} Katılımcı</td>
+            <td class="p-3.5 text-right font-mono font-black text-amber-400 text-sm">${s.total_score} Puan</td>
+        </tr>
+    `).join("");
+}
+
+async function openSchoolsLeaderboardModal() {
+    const modal = document.getElementById("modal-schools-leaderboard");
+    const tbody = document.getElementById("schools-leaderboard-tbody");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    window.soundManager.playClick();
+
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Okul puanları hesaplanıyor...</td></tr>`;
+        try {
+            const res = await fetch("/api/leaderboard/schools");
+            const data = await res.json();
+            if (data && data.schools) {
+                renderSchoolsLeaderboard(data.schools);
+            }
+        } catch(e) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-rose-400">Veriler yüklenemedi.</td></tr>`;
+        }
+    }
+}
+
+function closeSchoolsLeaderboardModal() {
+    const modal = document.getElementById("modal-schools-leaderboard");
     if (modal) modal.classList.add("hidden");
     window.soundManager.playClick();
 }

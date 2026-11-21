@@ -325,6 +325,8 @@ async function submitAnswer(choice) {
             currentPlayer.streak = data.streak;
             currentPlayer.last_is_correct = data.is_correct;
             currentPlayer.last_points = data.points_earned;
+            currentPlayer.last_base_points = data.base_points || 0;
+            currentPlayer.last_speed_bonus = data.speed_bonus || 0;
             updatePlayerHeader();
             localStorage.setItem("aura_player", JSON.stringify(currentPlayer));
         }
@@ -349,7 +351,41 @@ function resetQuestionButtons() {
 
 // Apply Real-Time State
 function applyState(state) {
-    if (!state || !currentPlayer) return;
+    if (!state) return;
+
+    // Apply Live Theme Sync
+    if (state.theme) {
+        document.body.className = "theme-" + state.theme;
+    } else {
+        document.body.className = "theme-default";
+    }
+
+    // Handle Mobile Countdown Overlay
+    const cdOverlay = document.getElementById("play-countdown-overlay");
+    const cdNum = document.getElementById("play-countdown-number");
+    const cdTitle = document.getElementById("play-countdown-title");
+    if (state.status === "COUNTDOWN") {
+        if (cdOverlay) cdOverlay.classList.remove("hidden");
+        const startTs = state.countdown_start_timestamp;
+        const now = Date.now() / 1000;
+        const remaining = Math.max(0, Math.ceil(5 - (startTs > 0 ? (now - startTs) : 0)));
+        if (cdNum) {
+            if (remaining > 0) {
+                cdNum.innerText = remaining;
+                if (cdTitle) cdTitle.innerText = "Yarışma Başlıyor!";
+                if (remaining <= 3) {
+                    try { window.soundManager.playTick(); } catch(e) {}
+                }
+            } else {
+                cdNum.innerText = "🚀";
+                if (cdTitle) cdTitle.innerText = "BAŞLADI!";
+            }
+        }
+    } else {
+        if (cdOverlay) cdOverlay.classList.add("hidden");
+    }
+
+    if (!currentPlayer) return;
 
     // Check if room PIN changed
     if (state.room_pin && currentRoomPin && state.room_pin !== currentRoomPin) {
@@ -389,17 +425,26 @@ function applyState(state) {
         const titleEl = document.getElementById("result-title");
         const ptsEl = document.getElementById("result-points");
         const iconEl = document.getElementById("result-icon");
+        const breakdownEl = document.getElementById("result-breakdown");
+        const basePtsEl = document.getElementById("result-base-pts");
+        const speedPtsEl = document.getElementById("result-speed-pts");
 
         if (isCorrect) {
             titleEl.innerText = "Tebrikler! Doğru Cevap 🎯";
             ptsEl.innerText = `+${pts} Puan`;
-            ptsEl.className = "text-lg font-black text-emerald-400 mb-4";
+            ptsEl.className = "text-lg font-black text-emerald-400 mb-1";
             iconEl.innerText = "🌟";
+            if (breakdownEl) {
+                breakdownEl.classList.remove("hidden");
+                if (basePtsEl) basePtsEl.innerText = `+${currentPlayer.last_base_points || 500}`;
+                if (speedPtsEl) speedPtsEl.innerText = `+${currentPlayer.last_speed_bonus || (pts - 500)}`;
+            }
         } else {
             titleEl.innerText = "Sağlık Olsun! Yanlış Cevap";
             ptsEl.innerText = "+0 Puan";
             ptsEl.className = "text-lg font-black text-rose-400 mb-4";
             iconEl.innerText = "💔";
+            if (breakdownEl) breakdownEl.classList.add("hidden");
         }
 
         document.getElementById("result-total-score").innerText = currentPlayer.score || 0;

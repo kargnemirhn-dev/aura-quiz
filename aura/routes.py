@@ -19,7 +19,8 @@ from aura.models import (
     Question,
     QuestionOption,
     PlayerScoreAdjustRequest,
-    QuizFolderCreate
+    QuizFolderCreate,
+    ThemeUpdateRequest
 )
 from aura.game_manager import game_manager
 from aura.gemini_service import gemini_service
@@ -145,6 +146,12 @@ async def get_leaderboard(limit: int = 10):
 async def get_podium():
     return game_manager.get_podium()
 
+@router.get("/api/leaderboard/schools")
+async def get_schools_leaderboard():
+    return {
+        "schools": game_manager.get_schools_leaderboard()
+    }
+
 @router.get("/api/firebase-config")
 async def get_fb_config():
     return get_firebase_web_config()
@@ -262,6 +269,12 @@ async def admin_set_timer(payload: TimerSettingRequest):
         "transition_delay": game_manager.transition_delay,
         "auto_mode": game_manager.auto_mode
     }
+
+@router.post("/api/admin/theme")
+async def admin_set_theme(payload: ThemeUpdateRequest):
+    verify_admin_pin(payload.admin_pin)
+    theme = await game_manager.set_theme(payload.theme)
+    return {"success": True, "theme": theme}
 
 # --- Export Raporları (Excel & PDF) ---
 @router.get("/api/admin/export/excel")
@@ -444,6 +457,9 @@ async def admin_action(payload: AdminActionRequest):
     elif action == "SET_DURATION":
         duration = int(payload.payload.get("duration", 15)) if payload.payload else 15
         await game_manager.set_timer_settings(duration, game_manager.auto_mode)
+    elif action == "SET_THEME":
+        theme = str(payload.payload.get("theme", "default")) if payload.payload else "default"
+        await game_manager.set_theme(theme)
     else:
         raise HTTPException(status_code=400, detail=f"Bilinmeyen aksiyon: {action}")
 

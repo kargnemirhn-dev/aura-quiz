@@ -262,3 +262,149 @@ body {
 .hidden {
     display: none !important;
 }
+
+/* ==========================================================================
+   KAHHOOT-STYLE 5-TO-1 FULLSCREEN COUNTDOWN ANIMATION
+   ========================================================================== */
+@keyframes countdownPop {
+    0% {
+        transform: scale(0.3) rotate(-10deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2) rotate(4deg);
+        opacity: 1;
+    }
+    75% {
+        transform: scale(0.95) rotate(-2deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+@keyframes countdownRingPulse {
+    0% {
+        transform: scale(0.7);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
+}
+
+.countdown-number {
+    display: inline-block;
+    animation: countdownPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.countdown-ring {
+    animation: countdownRingPulse 1.2s ease-out infinite;
+}
+
+/* ==========================================================================
+   ÖZEL TEMA SEÇENEKLERİ (THEMES)
+   1. Varsayılan Karanlık Mod (Orijinal) - body.theme-default / default
+   2. Cyberpunk - body.theme-cyberpunk
+   3. Koyu Neon - body.theme-dark-neon
+   4. Kurumsal Tema - body.theme-corporate
+   ========================================================================== */
+
+/* CYBERPUNK THEME */
+body.theme-cyberpunk {
+    background-color: #06060c !important;
+    background-image: radial-gradient(circle at 50% 0%, rgba(255, 0, 85, 0.15), transparent 40%),
+                      radial-gradient(circle at 100% 100%, rgba(0, 240, 255, 0.12), transparent 40%) !important;
+    color: #e0f2fe;
+}
+body.theme-cyberpunk .bg-slate-900,
+body.theme-cyberpunk .bg-slate-900\/95,
+body.theme-cyberpunk .bg-slate-900\/90,
+body.theme-cyberpunk .bg-slate-900\/80,
+body.theme-cyberpunk .bg-slate-900\/70,
+body.theme-cyberpunk .bg-slate-900\/50,
+body.theme-cyberpunk .bg-slate-800 {
+    background-color: #0d0e1a !important;
+    border-color: rgba(0, 240, 255, 0.35) !important;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.15) !important;
+}
+body.theme-cyberpunk .bg-slate-950,
+body.theme-cyberpunk .bg-slate-950\/80 {
+    background-color: #050508 !important;
+    border-color: rgba(252, 238, 10, 0.3) !important;
+}
+body.theme-cyberpunk .text-indigo-400,
+body.theme-cyberpunk .text-indigo-300 {
+    color: #00f0ff !important;
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+body.theme-cyberpunk .text-amber-400,
+body.theme-cyberpunk .text-yellow-400 {
+    color: #fcee0a !important;
+    text-shadow: 0 0 10px rgba(252, 238, 10, 0.6);
+}
+
+/* DARK NEON THEME */
+body.theme-dark-neon {
+    background-color: #020408 !important;
+    background-image: radial-gradient(circle at 50% 10%, rgba(16, 185, 129, 0.15), transparent 45%),
+                      radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.12), transparent 45%) !important;
+    color: #ecfdf5;
+}
+body.theme-dark-neon .bg-slate-900,
+body.theme-dark-neon .bg-slate-900\/95,
+body.theme-dark-neon .bg-slate-900\/90,
+body.theme-dark-neon .bg-slate-900\/80,
+body.theme-dark-neon .bg-slate-900\/70,
+body.theme-dark-neon .bg-slate-900\/50,
+body.theme-dark-neon .bg-slate-800 {
+    background-color: #050b14 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.18) !important;
+}
+body.theme-dark-neon .bg-slate-950,
+body.theme-dark-neon .bg-slate-950\/80 {
+    background-color: #02050a !important;
+    border-color: rgba(16, 185, 129, 0.25) !important;
+}
+body.theme-dark-neon .text-indigo-400,
+body.theme-dark-neon .text-indigo-300 {
+    color: #10b981 !important;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+body.theme-dark-neon .text-amber-400,
+body.theme-dark-neon .text-yellow-400 {
+    color: #34d399 !important;
+    text-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+}
+
+/* CORPORATE THEME */
+body.theme-corporate {
+    background-color: #0a1124 !important;
+    background-image: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15), transparent 50%),
+                      radial-gradient(circle at 100% 100%, rgba(30, 58, 138, 0.2), transparent 50%) !important;
+    color: #f8fafc;
+}
+body.theme-corporate .bg-slate-900,
+body.theme-corporate .bg-slate-900\/95,
+body.theme-corporate .bg-slate-900\/90,
+body.theme-corporate .bg-slate-900\/80,
+body.theme-corporate .bg-slate-900\/70,
+body.theme-corporate .bg-slate-900\/50,
+body.theme-corporate .bg-slate-800 {
+    background-color: #111a36 !important;
+    border-color: rgba(148, 163, 184, 0.3) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+}
+body.theme-corporate .bg-slate-950,
+body.theme-corporate .bg-slate-950\/80 {
+    background-color: #0c142b !important;
+    border-color: rgba(96, 165, 250, 0.3) !important;
+}
+body.theme-corporate .text-indigo-400,
+body.theme-corporate .text-indigo-300 {
+    color: #60a5fa !important;
+}

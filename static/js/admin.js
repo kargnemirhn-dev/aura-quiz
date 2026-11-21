@@ -1020,7 +1020,87 @@ function applyState(state) {
         const autoToggle = document.getElementById("toggle-auto-mode");
         if (autoToggle) autoToggle.checked = isAutoMode;
     }
+    if (state.theme) {
+        updateThemeUI(state.theme);
+    }
 }
+
+// Theme Dropdown & Switcher (Requirement 2)
+function toggleThemeDropdown() {
+    const menu = document.getElementById("theme-dropdown-menu");
+    if (menu) menu.classList.toggle("hidden");
+    window.soundManager.playClick();
+}
+
+async function selectTheme(themeId) {
+    if (!adminPin) {
+        checkAdminAuth();
+        return;
+    }
+    const menu = document.getElementById("theme-dropdown-menu");
+    if (menu) menu.classList.add("hidden");
+
+    try {
+        const res = await fetch("/api/admin/theme", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                admin_pin: adminPin,
+                theme: themeId
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            updateThemeUI(data.theme);
+            window.soundManager.playCorrect();
+        } else {
+            alert(data.detail || "Tema değiştirilemedi!");
+        }
+    } catch(e) {
+        alert("Bağlantı hatası!");
+    }
+}
+
+function updateThemeUI(themeId) {
+    if (!themeId) themeId = "default";
+    document.body.className = "theme-" + themeId;
+
+    const labels = {
+        "default": "Varsayılan",
+        "cyberpunk": "Cyberpunk",
+        "dark-neon": "Koyu Neon",
+        "corporate": "Kurumsal"
+    };
+
+    const labelEl = document.getElementById("current-theme-label");
+    if (labelEl) labelEl.innerText = `Tema: ${labels[themeId] || "Varsayılan"}`;
+
+    const themes = ["default", "cyberpunk", "dark-neon", "corporate"];
+    themes.forEach(t => {
+        const checkEl = document.getElementById(`theme-check-${t}`);
+        if (checkEl) {
+            if (t === themeId) checkEl.classList.remove("hidden");
+            else checkEl.classList.add("hidden");
+        }
+
+        const btnEl = document.getElementById(`btn-theme-${t}`);
+        if (btnEl) {
+            if (t === themeId) {
+                btnEl.className = "p-2.5 rounded-xl border border-indigo-500 bg-indigo-600/20 text-xs font-bold text-white text-left transition-all";
+            } else {
+                btnEl.className = "p-2.5 rounded-xl border border-slate-700 text-xs font-bold text-slate-300 hover:border-indigo-500 text-left transition-all";
+            }
+        }
+    });
+}
+
+document.addEventListener("click", (e) => {
+    const btn = document.getElementById("btn-theme-dropdown");
+    const menu = document.getElementById("theme-dropdown-menu");
+    if (menu && !menu.classList.contains("hidden") && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add("hidden");
+    }
+});
 
 let firestoreUnsubscribe = null;
 function listenToFirestore(roomPin) {

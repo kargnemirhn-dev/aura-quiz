@@ -37,6 +37,33 @@
                 <span class="hidden sm:inline">Admin PIN Değiştir</span>
             </button>
 
+            <!-- Özel Tema Seçici Buton -->
+            <div class="relative inline-block text-left">
+                <button type="button" onclick="toggleThemeDropdown()" id="btn-theme-dropdown" class="flex items-center space-x-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 hover:text-white border border-indigo-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm" title="Tema Seç">
+                    <i data-lucide="palette" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span id="current-theme-label" class="hidden sm:inline">Tema: Varsayılan</span>
+                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                </button>
+                <div id="theme-dropdown-menu" class="hidden absolute right-0 mt-2 w-52 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-1.5 z-50">
+                    <button onclick="selectTheme('default')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-800 flex items-center justify-between">
+                        <span>🌌 Varsayılan Karanlık</span>
+                        <span id="theme-check-default" class="text-indigo-400">✓</span>
+                    </button>
+                    <button onclick="selectTheme('cyberpunk')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-800 flex items-center justify-between">
+                        <span>⚡ Cyberpunk</span>
+                        <span id="theme-check-cyberpunk" class="text-indigo-400 hidden">✓</span>
+                    </button>
+                    <button onclick="selectTheme('dark-neon')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-800 flex items-center justify-between">
+                        <span>🟢 Koyu Neon</span>
+                        <span id="theme-check-dark-neon" class="text-indigo-400 hidden">✓</span>
+                    </button>
+                    <button onclick="selectTheme('corporate')" class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-200 hover:bg-slate-800 flex items-center justify-between">
+                        <span>🏛️ Kurumsal Tema</span>
+                        <span id="theme-check-corporate" class="text-indigo-400 hidden">✓</span>
+                    </button>
+                </div>
+            </div>
+
             <button onclick="adminLogout()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all" title="Çıkış Yap">
                 <i data-lucide="lock" class="w-4 h-4"></i>
             </button>
@@ -149,6 +176,31 @@
                 <button onclick="confirmResetRoom()" class="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold py-2.5 rounded-xl text-xs transition-all active:scale-95">
                     Odayı ve Skorları Sıfırla
                 </button>
+            </div>
+
+            <!-- 4. Theme Selection Card (Requirement 2) -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-3">
+                <div>
+                    <h3 class="text-sm sm:text-base font-extrabold text-white mb-1 flex items-center space-x-2">
+                        <i data-lucide="palette" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Özel Tema Seçenekleri</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Sahne ve oyuncu ekranlarının görsel temasını anında değiştirin.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="selectTheme('default')" id="btn-theme-default" class="p-2.5 rounded-xl border border-indigo-500 bg-indigo-600/20 text-xs font-bold text-white text-left transition-all">
+                        🌌 Varsayılan Karanlık
+                    </button>
+                    <button onclick="selectTheme('cyberpunk')" id="btn-theme-cyberpunk" class="p-2.5 rounded-xl border border-slate-700 text-xs font-bold text-slate-300 hover:border-indigo-500 text-left transition-all">
+                        ⚡ Cyberpunk
+                    </button>
+                    <button onclick="selectTheme('dark-neon')" id="btn-theme-dark-neon" class="p-2.5 rounded-xl border border-slate-700 text-xs font-bold text-slate-300 hover:border-indigo-500 text-left transition-all">
+                        🟢 Koyu Neon
+                    </button>
+                    <button onclick="selectTheme('corporate')" id="btn-theme-corporate" class="p-2.5 rounded-xl border border-slate-700 text-xs font-bold text-slate-300 hover:border-indigo-500 text-left transition-all">
+                        🏛️ Kurumsal Tema
+                    </button>
+                </div>
             </div>
 
         </div>

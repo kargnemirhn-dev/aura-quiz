@@ -511,13 +511,31 @@ class GeminiQuestionService:
         """
 
         try:
-            # Try official google.genai SDK
+            # Try official google.genai SDK with resilient candidate model fallback
             from google import genai
             client = genai.Client(api_key=self.api_key)
-            response = client.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-            )
+
+            candidate_models = [self.model_name]
+            fallback_model = "models/gemini-3.8-flash" if "3.5" in self.model_name else "models/gemini-3.5-flash-lite"
+            if fallback_model not in candidate_models:
+                candidate_models.append(fallback_model)
+
+            response = None
+            for cand_model in candidate_models:
+                try:
+                    response = client.models.generate_content(
+                        model=cand_model,
+                        contents=prompt,
+                    )
+                    if response and response.text:
+                        break
+                except Exception as cand_err:
+                    logger.warning(f"Candidate model {cand_model} failed: {cand_err}. Trying fallback...")
+                    continue
+
+            if not response or not response.text:
+                raise RuntimeError("All candidate Gemini models failed to generate content.")
+
             raw_text = response.text.strip()
             
             # Clean markdown codeblocks if model included them
@@ -529,7 +547,20 @@ class GeminiQuestionService:
                 raw_text = raw_text[:-3]
             raw_text = raw_text.strip()
 
-            parsed_list = json.loads(raw_text)
+            # Robust JSON array extraction
+            start_bracket = raw_text.find('[')
+            end_bracket = raw_text.rfind(']')
+            if start_bracket != -1 and end_bracket != -1 and end_bracket > start_bracket:
+                raw_text = raw_text[start_bracket:end_bracket + 1]
+
+            import re
+            cleaned_json = re.sub(r',\s*([\]}])', r'\1', raw_text)
+
+            try:
+                parsed_list = json.loads(cleaned_json)
+            except Exception:
+                parsed_list = json.loads(raw_text)
+
             questions: List[Question] = []
             for idx, item in enumerate(parsed_list, start=1):
                 diff_val = item.get("difficulty", "Orta")

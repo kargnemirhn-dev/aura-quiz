@@ -13,6 +13,15 @@ logger = logging.getLogger("aura.game")
 MAX_TOTAL_QUESTIONS = 60 # System-wide max total quiz questions (Requirement 9)
 MAX_GENERATE_QUESTIONS = 50 # Single AI generation limit (Requirement 9)
 
+OFFICIAL_SCHOOLS = [
+    "Halil İnalcık Anadolu Lisesi",
+    "Cemil Meriç Kız Mesleki ve Teknik Anadolu Lisesi",
+    "Güngören Anadolu Lisesi",
+    "Erhan Dedeoğlu Anadolu Lisesi",
+    "Güngören Gençosman Borsa İstanbul Mesleki ve Teknik Anadolu Lisesi",
+    "Diğer"
+]
+
 def generate_random_6digit_pin() -> str:
     return str(random.randint(100000, 999999))
 
@@ -31,6 +40,9 @@ class GameManager:
         self.timer_remaining: int = 15
         self.leaderboard_countdown: int = 5
         self.leaderboard_start_timestamp: float = 0
+        self.countdown_remaining: int = 5
+        self.countdown_start_timestamp: float = 0
+        self.theme: str = "default"
         self.last_reaction: Optional[Dict] = None
         self.question_start_timestamp: float = 0
         self._timer_task: Optional[asyncio.Task] = None
@@ -86,6 +98,11 @@ class GameManager:
             elapsed_lb = time.time() - self.leaderboard_start_timestamp
             dynamic_lb_countdown = max(0, int(self.transition_delay - elapsed_lb))
 
+        dynamic_countdown = self.countdown_remaining
+        if self.status == "COUNTDOWN" and self.countdown_start_timestamp > 0:
+            elapsed_cd = time.time() - self.countdown_start_timestamp
+            dynamic_countdown = max(0, int(5 - elapsed_cd))
+
         return {
             "room_pin": self.room_pin,
             "status": self.status,
@@ -97,8 +114,12 @@ class GameManager:
             "transition_delay": self.transition_delay,
             "timer_remaining": dynamic_timer,
             "leaderboard_countdown": dynamic_lb_countdown,
+            "countdown_remaining": dynamic_countdown,
+            "countdown_start_timestamp": self.countdown_start_timestamp,
             "question_start_timestamp": self.question_start_timestamp,
             "leaderboard_start_timestamp": self.leaderboard_start_timestamp,
+            "theme": self.theme,
+            "schools_leaderboard": self.get_schools_leaderboard(),
             "current_question": q_dict,
             "participants_count": len(self.players),
             "answers_count": answers_count,
@@ -156,6 +177,41 @@ class GameManager:
             }
             for idx, p in enumerate(sorted_players[:limit])
         ]
+
+    def get_schools_leaderboard(self) -> List[Dict[str, Any]]:
+        schools_data = []
+        for school in OFFICIAL_SCHOOLS:
+            if school == "Diğer":
+                matching_players = [
+                    p for p in self.players.values()
+                    if p.school == "Diğer" or p.school not in OFFICIAL_SCHOOLS
+                ]
+            else:
+                matching_players = [
+                    p for p in self.players.values()
+                    if p.school == school
+                ]
+            total_score = sum(p.score for p in matching_players)
+            count = len(matching_players)
+            avg_score = int(total_score / count) if count > 0 else 0
+            schools_data.append({
+                "school": school,
+                "total_score": total_score,
+                "player_count": count,
+                "avg_score": avg_score
+            })
+        schools_data.sort(key=lambda s: (s["total_score"], s["player_count"]), reverse=True)
+        for idx, s in enumerate(schools_data):
+            s["rank"] = idx + 1
+        return schools_data
+
+    async def set_theme(self, theme: str) -> str:
+        async with self._lock:
+            valid_themes = ["default", "cyberpunk", "dark-neon", "corporate"]
+            if theme in valid_themes:
+                self.theme = theme
+                await self.broadcast_state()
+            return self.theme
 
     def get_podium(self) -> Dict[str, Any]:
         sorted_players = sorted(
@@ -359,17 +415,27 @@ class GameManager:
     async def start_game(self):
         async with self._lock:
             self._cancel_timer()
-            self.status = "QUESTION"
+            self.status = "COUNTDOWN"
             self.current_question_index = 0
-            self.timer_remaining = self.duration
-            self.question_start_timestamp = time.time()
+            self.countdown_remaining = 5
+            self.countdown_start_timestamp = time.time()
             self._reset_answers()
             await self.broadcast_state()
-            self._start_countdown()
+            self._start_countdown_to_question()
 
     async def next_question(self):
         async with self._lock:
             self._cancel_timer()
+            if self.status == "COUNTDOWN":
+                self.status = "QUESTION"
+                self.current_question_index = 0
+                self.timer_remaining = self.duration
+                self.question_start_timestamp = time.time()
+                self._reset_answers()
+                await self.broadcast_state()
+                self._start_countdown()
+                return
+
             if self.current_question_index + 1 < len(self.questions):
                 self.current_question_index += 1
                 self.status = "QUESTION"
@@ -456,10 +522,14 @@ class GameManager:
             time_ratio = max(0.0, 1.0 - (elapsed / float(self.duration)))
 
             is_correct = (choice == curr_q.correct)
+            base_points = 0
+            speed_bonus = 0
             points = 0
             if is_correct:
-                # Kahoot scoring algorithm: base 500 + up to 500 points for speed
-                points = int(500 + (500 * time_ratio))
+                # Dynamic speed scoring: base 500 + up to 500 points for speed
+                base_points = 500
+                speed_bonus = int(500 * time_ratio)
+                points = base_points + speed_bonus
                 player.score += points
                 player.streak += 1
             else:
@@ -486,9 +556,37 @@ class GameManager:
                 "success": True,
                 "is_correct": is_correct,
                 "points_earned": points,
+                "base_points": base_points,
+                "speed_bonus": speed_bonus,
                 "current_score": player.score,
                 "streak": player.streak
             }
+
+    def _start_countdown_to_question(self):
+        """Starts 5-second animated countdown before question begins"""
+        self._cancel_timer()
+
+        async def countdown():
+            try:
+                for c in range(5, 0, -1):
+                    if self.status != "COUNTDOWN":
+                        return
+                    self.countdown_remaining = c
+                    await self.broadcast_state()
+                    await asyncio.sleep(1)
+
+                if self.status == "COUNTDOWN":
+                    self.status = "QUESTION"
+                    self.current_question_index = 0
+                    self.timer_remaining = self.duration
+                    self.question_start_timestamp = time.time()
+                    self._reset_answers()
+                    await self.broadcast_state()
+                    self._start_countdown()
+            except asyncio.CancelledError:
+                pass
+
+        self._timer_task = asyncio.create_task(countdown())
 
     def _start_countdown(self):
         """Starts the timer countdown in background"""

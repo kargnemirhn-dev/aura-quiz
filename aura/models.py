@@ -118,6 +118,10 @@ class UnbanRequest(BaseModel):
     def get_target_id(self) -> str:
         return self.user_id or self.identifier or ""
 
+class ThemeUpdateRequest(BaseModel):
+    admin_pin: str
+    theme: Literal["default", "cyberpunk", "dark-neon", "corporate"] = "default"
+
 class AdminActionRequest(BaseModel):
     admin_pin: str
     action: Literal[
@@ -128,13 +132,14 @@ class AdminActionRequest(BaseModel):
         "FINISH_PODIUM",
         "RESET_ROOM",
         "SET_AUTO_MODE",
-        "SET_DURATION"
+        "SET_DURATION",
+        "SET_THEME"
     ]
     payload: Optional[Dict] = None
 
 class GameState(BaseModel):
     room_pin: str
-    status: Literal["LOBBY", "QUESTION", "REVEAL", "LEADERBOARD", "PODIUM"] = "LOBBY"
+    status: Literal["LOBBY", "COUNTDOWN", "QUESTION", "REVEAL", "LEADERBOARD", "PODIUM"] = "LOBBY"
     current_question_index: int = 0
     total_questions: int = 30
     auto_mode: bool = False
@@ -142,7 +147,11 @@ class GameState(BaseModel):
     transition_delay: int = 5 # Auto transition duration on leaderboard
     timer_remaining: int = 15
     leaderboard_countdown: int = 5
+    countdown_remaining: int = 5
+    countdown_start_timestamp: float = 0
     question_start_timestamp: float = 0
+    theme: str = "default"
+    schools_leaderboard: List[Dict[str, Any]] = Field(default_factory=list)
     current_question: Optional[Dict] = None
     participants_count: int = 0
     answers_count: int = 0
