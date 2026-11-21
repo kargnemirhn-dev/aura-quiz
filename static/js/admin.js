@@ -1,5 +1,5 @@
 // Admin Controller
-let adminPin = sessionStorage.getItem("aura_admin_pin") || "";
+let adminPin = ""; // Requirement 1: Never keep open sessions, require PIN verification on every visit/reload
 let currentQuestionDuration = 15;
 let currentTransitionDelay = 5;
 let isAutoMode = false;
@@ -40,34 +40,10 @@ function hideAdminAuthModal() {
 }
 
 async function checkAdminAuth() {
-    if (!adminPin) {
-        showAdminAuthModal();
-        return;
-    }
-
-    try {
-        const res = await fetch("/api/admin/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ admin_pin: adminPin })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-            hideAdminAuthModal();
-            try { loadFolders(); } catch(e) {}
-            try { loadQuestions(); } catch(e) {}
-            try { refreshAdminPlayers(); } catch(e) {}
-        } else {
-            sessionStorage.removeItem("aura_admin_pin");
-            adminPin = "";
-            showAdminAuthModal("Oturum süresi doldu veya Admin PIN güncellendi. Lütfen giriş yapınız.");
-        }
-    } catch(err) {
-        hideAdminAuthModal();
-        try { loadFolders(); } catch(e) {}
-        try { loadQuestions(); } catch(e) {}
-        try { refreshAdminPlayers(); } catch(e) {}
-    }
+    // Clear any previous session; require PIN entry every time
+    adminPin = "";
+    sessionStorage.removeItem("aura_admin_pin");
+    showAdminAuthModal();
 }
 
 async function handleAdminAuth(e) {
@@ -100,7 +76,6 @@ async function handleAdminAuth(e) {
         const data = await res.json();
         if (res.ok && data.success) {
             adminPin = pin;
-            sessionStorage.setItem("aura_admin_pin", adminPin);
             hideAdminAuthModal();
 
             try {
@@ -138,8 +113,8 @@ async function handleAdminAuth(e) {
 }
 
 function adminLogout() {
-    sessionStorage.removeItem("aura_admin_pin");
     adminPin = "";
+    sessionStorage.removeItem("aura_admin_pin");
     showAdminAuthModal();
     try {
         if (window.soundManager && typeof window.soundManager.playClick === "function") {
@@ -497,19 +472,25 @@ async function loadFolders() {
             const container = document.getElementById("quiz-folders-container");
             const badge = document.getElementById("folders-total-badge");
             const selectEl = document.getElementById("ai-folder-select");
+            const mqFolderSelect = document.getElementById("mq-folder");
 
             if (badge) badge.innerText = `${data.folders.length} Klasör`;
 
-            if (selectEl) {
-                selectEl.innerHTML = data.folders.map(f => `
-                    <option value="${f.id}" ${f.is_active ? 'selected' : ''}>${escapeHtml(f.name)} (${f.question_count} Soru)</option>
-                `).join("");
-            }
+            const folderOptions = data.folders.map(f => {
+                const fTitle = f.title || f.name || "Genel Soru Seti";
+                const fCount = f.questions_count ?? f.question_count ?? (f.questions ? f.questions.length : 0);
+                return `<option value="${f.id}" ${f.is_active ? 'selected' : ''}>${escapeHtml(fTitle)} (${fCount} Soru)</option>`;
+            }).join("");
+
+            if (selectEl) selectEl.innerHTML = folderOptions;
+            if (mqFolderSelect) mqFolderSelect.innerHTML = folderOptions;
 
             if (!container) return;
 
             container.innerHTML = data.folders.map(f => {
                 const isActive = f.is_active || (f.id === activeFolderId);
+                const fTitle = f.title || f.name || "Genel Soru Seti";
+                const fCount = f.questions_count ?? f.question_count ?? (f.questions ? f.questions.length : 0);
                 return `
                     <div class="p-5 rounded-2xl border transition-all ${isActive ? 'bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500/30' : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'}">
                         <div class="flex items-start justify-between mb-3">
@@ -519,14 +500,14 @@ async function loadFolders() {
                                 </div>
                                 <div>
                                     <h4 class="font-extrabold text-sm text-white flex items-center space-x-2">
-                                        <span>${escapeHtml(f.name)}</span>
+                                        <span>${escapeHtml(fTitle)}</span>
                                         ${isActive ? '<span class="text-[10px] font-black bg-indigo-500 text-white px-2 py-0.5 rounded-full">AKTİF</span>' : ''}
                                     </h4>
                                     <p class="text-xs text-slate-400 line-clamp-1">${escapeHtml(f.description || 'Açıklama belirtilmedi')}</p>
                                 </div>
                             </div>
                             <span class="text-xs font-mono font-black text-indigo-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg">
-                                ${f.question_count} / 60 Soru
+                                ${fCount} / 60 Soru
                             </span>
                         </div>
 
@@ -689,6 +670,18 @@ function distributeDifficultiesAutomatically(val) {
     if (elZ) elZ.value = zor;
 }
 
+function syncDifficultyInputsToTotal() {
+    const ck = parseInt(document.getElementById("diff-cok-kolay").value) || 0;
+    const k = parseInt(document.getElementById("diff-kolay").value) || 0;
+    const o = parseInt(document.getElementById("diff-orta").value) || 0;
+    const z = parseInt(document.getElementById("diff-zor").value) || 0;
+    const sum = ck + k + o + z;
+    const totalEl = document.getElementById("ai-total-count");
+    if (totalEl && sum > 0) {
+        totalEl.value = Math.min(50, sum);
+    }
+}
+
 async function handleAiGenerateSubmit(e) {
     e.preventDefault();
     if (!adminPin) {
@@ -696,19 +689,17 @@ async function handleAiGenerateSubmit(e) {
         return;
     }
 
-    const totalCount = parseInt(document.getElementById("ai-total-count").value) || 30;
-    if (totalCount < 1 || totalCount > 50) {
-        alert("Tek seferde üretilecek soru sayısı 1 ile 50 arasında olmalıdır!");
-        return;
-    }
-
-    const folderSelect = document.getElementById("ai-folder-select");
-    const targetFolderId = folderSelect ? folderSelect.value : (activeFolderId || "default");
-
     const cokKolay = parseInt(document.getElementById("diff-cok-kolay").value) || 0;
     const kolay = parseInt(document.getElementById("diff-kolay").value) || 0;
     const orta = parseInt(document.getElementById("diff-orta").value) || 0;
     const zor = parseInt(document.getElementById("diff-zor").value) || 0;
+    const sumDiffs = cokKolay + kolay + orta + zor;
+    const totalCount = sumDiffs > 0 ? Math.min(50, sumDiffs) : (parseInt(document.getElementById("ai-total-count").value) || 30);
+
+    if (totalCount < 1 || totalCount > 50) {
+        alert("Tek seferde üretilecek soru sayısı 1 ile 50 arasında olmalıdır!");
+        return;
+    }
 
     const btn = document.getElementById("btn-submit-ai-generator");
     const notice = document.getElementById("ai-status-notice");
@@ -779,7 +770,8 @@ async function loadQuestions() {
             if (activeFolderId) {
                 const folderMatch = cachedFolders.find(f => f.id === activeFolderId);
                 if (folderMatch && titleEl) {
-                    titleEl.innerText = `${folderMatch.name} Soruları`;
+                    const matchTitle = folderMatch.title || folderMatch.name || "Genel Soru Seti";
+                    titleEl.innerText = `${matchTitle} Soruları`;
                 }
                 const inFolder = data.questions.filter(q => q.folder_id === activeFolderId);
                 if (inFolder.length > 0 || cachedFolders.length > 1) {

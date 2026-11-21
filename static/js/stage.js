@@ -57,12 +57,13 @@ let qrLobbyInstance = null;
 let qrModalInstance = null;
 let lastReactionTimestamp = 0;
 
-// Stage Security / PIN Authentication
+// Stage Security / PIN Authentication (Requirement 1: Always require PIN verification on every entry/visit)
+let stageAuthenticated = false;
+
 function checkStageAuth() {
     const modal = document.getElementById("modal-stage-auth");
     if (!modal) return;
-    const isAuthed = sessionStorage.getItem("aura_stage_auth") === "true";
-    if (isAuthed) {
+    if (stageAuthenticated) {
         modal.style.display = "none";
         modal.classList.add("hidden");
         modal.classList.remove("flex");
@@ -104,7 +105,7 @@ async function handleStageAuth(e) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-            sessionStorage.setItem("aura_stage_auth", "true");
+            stageAuthenticated = true;
             const modal = document.getElementById("modal-stage-auth");
             if (modal) {
                 modal.style.display = "none";
@@ -142,6 +143,7 @@ async function handleStageAuth(e) {
 }
 
 function lockStage() {
+    stageAuthenticated = false;
     sessionStorage.removeItem("aura_stage_auth");
     const modal = document.getElementById("modal-stage-auth");
     if (modal) {
@@ -302,7 +304,8 @@ function applyState(state) {
     // Check for incoming live reactions
     if (state.last_reaction && state.last_reaction.timestamp > lastReactionTimestamp) {
         lastReactionTimestamp = state.last_reaction.timestamp;
-        spawnReaction(state.last_reaction.emoji, state.last_reaction.player_name);
+        const sender = state.last_reaction.sender || state.last_reaction.player_name || "İzleyici";
+        spawnReaction(state.last_reaction.emoji, sender);
     }
 
     const stageCount = document.getElementById("stage-players-count");
@@ -567,6 +570,8 @@ function closeFullLeaderboardModal() {
 
 // Init Stage
 function initStage() {
+    stageAuthenticated = false;
+    sessionStorage.removeItem("aura_stage_auth");
     checkStageAuth();
     updateQrCodes(currentRoomPin);
 

@@ -300,9 +300,11 @@ class GameManager:
             {
                 "id": f.id,
                 "title": f.title,
+                "name": f.title,
                 "description": f.description,
                 "created_at": f.created_at,
                 "questions_count": len(f.questions),
+                "question_count": len(f.questions),
                 "is_active": (f.id == self.active_folder_id),
                 "questions": [q.model_dump() for q in f.questions]
             }
@@ -316,6 +318,7 @@ class GameManager:
                 "id": str(uuid.uuid4())[:8],
                 "emoji": emoji,
                 "sender": sender[:20],
+                "player_name": sender[:20],
                 "timestamp": time.time()
             }
             self.last_reaction = reaction_data

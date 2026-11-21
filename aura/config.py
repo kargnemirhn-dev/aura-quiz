@@ -23,7 +23,7 @@ class Settings:
 
     # Gemini AI API
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "models/gemini-3.8-flash")
 
     # Firebase Configuration (Optional in local mode, used for Firestore sync)
     FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID", "")

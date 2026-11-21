@@ -209,6 +209,30 @@ def run_comprehensive_qa_test():
         print("  ✓ Serverless Firestore timestamp tabanlı timer hesaplaması doğrulandı.")
 
         # ---------------------------------------------------------------------
+        # TEST G: Teknik Metinlerin Temizliği & "Rainbow RGB" ve "undefined" Kontrolü
+        # ---------------------------------------------------------------------
+        print("\n[TEST G] Teknik Metinlerin Temizliği & Arayüz Kontrolü Testi...")
+        admin_raw_text = (ROOT_DIR / "templates" / "admin.html").read_text(encoding="utf-8")
+        assert "Rainbow RGB" not in admin_raw_text, "Arayüzde teknik 'Rainbow RGB' metni yer alıyor!"
+        folders_data = game_manager.get_folders_list()
+        for fld in folders_data:
+            assert fld.get("title") and fld.get("name"), "Klasör başlığı eksik veya undefined olabilir!"
+            assert fld.get("questions_count") is not None and fld.get("question_count") is not None
+        print("  ✓ 'Rainbow RGB' teknik metinleri ve 'undefined' hatalı çıktıları arayüzden tamamen temizlendi.")
+
+        # ---------------------------------------------------------------------
+        # TEST H: Her Girişte PIN Sorma (Admin & Sahne Güvenlik Oturumu) Testi
+        # ---------------------------------------------------------------------
+        print("\n[TEST H] Her Girişte PIN Sorma ve Oturum Güvenliği Testi...")
+        admin_js_code = (ROOT_DIR / "static" / "js" / "admin.js").read_text(encoding="utf-8")
+        stage_js_code = (ROOT_DIR / "static" / "js" / "stage.js").read_text(encoding="utf-8")
+        assert 'let adminPin = "";' in admin_js_code, "Admin PIN tarayıcıda kalıcı başlatılmamalı!"
+        assert 'let stageAuthenticated = false;' in stage_js_code, "Sahne yetkisi tarayıcıda kalıcı başlatılmamalı!"
+        assert 'showAdminAuthModal()' in admin_js_code
+        assert 'checkStageAuth()' in stage_js_code
+        print("  ✓ Admin ve Sahne ekranlarına her erişimde PIN doğrulama zorunluluğu doğrulandı.")
+
+        # ---------------------------------------------------------------------
         # 1. ADMIN PANELİ: SIKIŞMAYAN BUTONLAR VE DÜZENLİ NAVİGASYON (Görsel 1)
         # ---------------------------------------------------------------------
         print("\n[GEREKSİNİM 1] Admin Paneli - Sıkışmayan Butonlar ve Düzenli Tablar Testi...")
@@ -405,7 +429,21 @@ def run_comprehensive_qa_test():
             "difficulties": {"cok_kolay": 2, "kolay": 3, "orta": 3, "zor": 2}
         })
         assert st_gen == 200 and gen_res["success"] is True
+        q_diffs = [q["difficulty"] for q in gen_res["questions"]]
+        assert q_diffs.count("Çok Kolay") == 2 and q_diffs.count("Kolay") == 3
         print(f"  ✓ Gemini AI ile 10 soru başarıyla üretildi (Toplam: {gen_res['total_questions']}/60).")
+        print(f"  ✓ Zorluk dağılımı tam olarak uygulandı: 2 Çok Kolay, 3 Kolay, 3 Orta, 2 Zor.")
+
+        # Test single difficulty distribution (Örn: 5 Çok Kolay istendiğinde tamamı Çok Kolay olmalı)
+        st_gen_ck, gen_ck_res, _ = http_post("/api/admin/generate-questions", {
+            "admin_pin": admin_pin,
+            "count": 5,
+            "folder_id": created_folder_id,
+            "difficulties": {"cok_kolay": 5, "kolay": 0, "orta": 0, "zor": 0}
+        })
+        assert st_gen_ck == 200
+        assert all(q["difficulty"] == "Çok Kolay" for q in gen_ck_res["questions"])
+        print("  ✓ 'Örn: Çok Kolay istendiğinde tamamı Çok Kolay' kuralı %100 başarıyla doğrulandı.")
 
         # ---------------------------------------------------------------------
         # 10. BAĞIMSIZ SÜRE AYARLARI

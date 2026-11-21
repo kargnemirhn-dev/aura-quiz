@@ -43,23 +43,23 @@
         </div>
     </header>
 
-    <!-- Admin Navigation Tabs (Requirement 1: Sıkışma Önlenmiş, Responsive & Kaydırılabilir Flex Yapı) -->
-    <div class="flex items-center gap-3 border-b border-slate-800 pb-4 mb-6 overflow-x-auto no-scrollbar flex-nowrap md:flex-wrap">
-        <button onclick="switchAdminTab('control')" id="tab-btn-control" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-extrabold bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all whitespace-nowrap">
-            <i data-lucide="gamepad-2" class="w-4 h-4"></i>
-            <span>Canlı Yarışma Kontrolü</span>
+    <!-- Admin Navigation Tabs: Sıkışmayan, Responsive Flex / Grid Yapı -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 border-b border-slate-800 pb-4 mb-6 w-full no-scrollbar">
+        <button onclick="switchAdminTab('control')" id="tab-btn-control" class="admin-tab-btn w-full flex items-center justify-center space-x-2 px-3 sm:px-4 py-3 rounded-2xl text-xs sm:text-sm font-extrabold bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 transition-all">
+            <i data-lucide="gamepad-2" class="w-4 h-4 flex-shrink-0"></i>
+            <span class="truncate">Canlı Yarışma Kontrolü</span>
         </button>
-        <button onclick="switchAdminTab('quizzes')" id="tab-btn-quizzes" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all whitespace-nowrap">
-            <i data-lucide="folder-kanban" class="w-4 h-4"></i>
-            <span>Quizlerim & Soru Bankası</span>
+        <button onclick="switchAdminTab('quizzes')" id="tab-btn-quizzes" class="admin-tab-btn w-full flex items-center justify-center space-x-2 px-3 sm:px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+            <i data-lucide="folder-kanban" class="w-4 h-4 flex-shrink-0"></i>
+            <span class="truncate">Quizlerim & Soru Bankası</span>
         </button>
-        <button onclick="switchAdminTab('reports')" id="tab-btn-reports" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all whitespace-nowrap">
-            <i data-lucide="download" class="w-4 h-4"></i>
-            <span>Sonuçları İndir (Excel & PDF)</span>
+        <button onclick="switchAdminTab('reports')" id="tab-btn-reports" class="admin-tab-btn w-full flex items-center justify-center space-x-2 px-3 sm:px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+            <i data-lucide="download" class="w-4 h-4 flex-shrink-0"></i>
+            <span class="truncate">Sonuçları İndir (Excel & PDF)</span>
         </button>
-        <button onclick="switchAdminTab('security')" id="tab-btn-security" class="admin-tab-btn flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all whitespace-nowrap">
-            <i data-lucide="shield-alert" class="w-4 h-4"></i>
-            <span>Ban Yönetimi</span>
+        <button onclick="switchAdminTab('security')" id="tab-btn-security" class="admin-tab-btn w-full flex items-center justify-center space-x-2 px-3 sm:px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all">
+            <i data-lucide="shield-alert" class="w-4 h-4 flex-shrink-0"></i>
+            <span class="truncate">Ban Yönetimi</span>
         </button>
     </div>
 
@@ -246,10 +246,10 @@
                         <span>Manuel Soru Ekle</span>
                     </button>
 
-                    <!-- Rainbow RGB Efektli AI Soru Üretici Butonu (Requirement 8 & 9) -->
+                    <!-- AI Soru Üretici Butonu (Görsel Animasyonlu Arka Plan) -->
                     <button id="btn-generate-ai-rgb" onclick="openAiGeneratorModal()" class="btn-rainbow-rgb inline-flex items-center space-x-2 font-black px-5 py-2.5 rounded-xl text-xs shadow-xl active:scale-95">
                         <i data-lucide="sparkles" class="w-4 h-4 animate-spin"></i>
-                        <span>✨ AI Soru Üretici (Rainbow RGB)</span>
+                        <span>✨ Yapay Zeka Soru Üretici</span>
                     </button>
                 </div>
             </div>
@@ -605,21 +605,25 @@
                         <div>
                             <label class="block text-[11px] font-bold text-emerald-400 mb-1">🟢 Çok Kolay (Adet)</label>
                             <input type="number" id="diff-cok-kolay" value="5" min="0" max="50"
+                                oninput="syncDifficultyInputsToTotal()"
                                 class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-blue-400 mb-1">🔵 Kolay (Adet)</label>
                             <input type="number" id="diff-kolay" value="10" min="0" max="50"
+                                oninput="syncDifficultyInputsToTotal()"
                                 class="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-yellow-400 mb-1">🟡 Orta (Adet)</label>
                             <input type="number" id="diff-orta" value="10" min="0" max="50"
+                                oninput="syncDifficultyInputsToTotal()"
                                 class="w-full bg-slate-900 border border-slate-700 focus:border-yellow-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-rose-400 mb-1">🔴 Zor (Adet)</label>
                             <input type="number" id="diff-zor" value="5" min="0" max="50"
+                                oninput="syncDifficultyInputsToTotal()"
                                 class="w-full bg-slate-900 border border-slate-700 focus:border-rose-500 rounded-xl px-3 py-2 text-white font-mono font-bold outline-none">
                         </div>
                     </div>

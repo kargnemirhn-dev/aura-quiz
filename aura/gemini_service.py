@@ -405,22 +405,28 @@ class GeminiQuestionService:
         self.api_key = settings.GEMINI_API_KEY
         self.model_name = settings.GEMINI_MODEL
 
-    def get_default_questions(self, folder_id: str = "default") -> List[Question]:
+    def get_default_questions(self, folder_id: str = "default", difficulties_seq: Optional[List[str]] = None) -> List[Question]:
         """Returns the curated default 30 summit questions with difficulties tagged"""
-        difficulties = ["Kolay", "Orta", "Zor", "Çok Kolay"]
-        return [
-            Question(
-                id=q["id"],
-                question=q["question"],
-                options=QuestionOption(**q["options"]),
-                correct=q["correct"],
-                explanation=q.get("explanation", ""),
-                duration=q.get("duration", 15),
-                difficulty=difficulties[(q["id"] - 1) % len(difficulties)],
-                folder_id=folder_id
+        default_diffs = ["Kolay", "Orta", "Zor", "Çok Kolay"]
+        questions = []
+        for idx, q in enumerate(FALLBACK_QUESTIONS):
+            if difficulties_seq and idx < len(difficulties_seq):
+                diff = difficulties_seq[idx]
+            else:
+                diff = default_diffs[(q["id"] - 1) % len(default_diffs)]
+            questions.append(
+                Question(
+                    id=q["id"],
+                    question=q["question"],
+                    options=QuestionOption(**q["options"]),
+                    correct=q["correct"],
+                    explanation=q.get("explanation", ""),
+                    duration=q.get("duration", 15),
+                    difficulty=diff,
+                    folder_id=folder_id
+                )
             )
-            for q in FALLBACK_QUESTIONS
-        ]
+        return questions
 
     async def generate_questions_with_gemini(
         self,
@@ -436,23 +442,36 @@ class GeminiQuestionService:
         # Enforce maximum 50 questions per single request (Requirement 9)
         count = min(50, max(1, count))
 
+        # Build target difficulty sequence if specified
+        target_diff_sequence: List[str] = []
+        if difficulties:
+            ck = int(difficulties.get("cok_kolay", 0))
+            k = int(difficulties.get("kolay", 0))
+            o = int(difficulties.get("orta", 0))
+            z = int(difficulties.get("zor", 0))
+            sum_diffs = ck + k + o + z
+            if sum_diffs > 0:
+                count = min(50, sum_diffs)
+                target_diff_sequence = (["Çok Kolay"] * ck) + (["Kolay"] * k) + (["Orta"] * o) + (["Zor"] * z)
+
         if not self.api_key:
             logger.warning("GEMINI_API_KEY is not set. Returning curated fallback questions.")
-            return self.get_default_questions(folder_id)[:count]
+            return self.get_default_questions(folder_id, target_diff_sequence)[:count]
 
         diff_instructions = ""
-        if difficulties:
+        if difficulties and target_diff_sequence:
             ck = difficulties.get("cok_kolay", 0)
             k = difficulties.get("kolay", 0)
             o = difficulties.get("orta", 0)
             z = difficulties.get("zor", 0)
             diff_instructions = f"""
-            SORU ZORLUK DAĞILIMI:
-            - Çok Kolay: {ck} adet
-            - Kolay: {k} adet
-            - Orta: {o} adet
-            - Zor: {z} adet
-            Lütfen her soru objesinde "difficulty" alanını ("Çok Kolay", "Kolay", "Orta", "Zor") olarak belirt.
+            ZORUNLU ZORLUK SEVİYESİ DAĞILIMI (BU ADETLERE KESİNLİKLE UYULMALIDIR):
+            - 'Çok Kolay': TAM {ck} adet soru
+            - 'Kolay': TAM {k} adet soru
+            - 'Orta': TAM {o} adet soru
+            - 'Zor': TAM {z} adet soru
+            Her soru objesindeki "difficulty" alanını tam olarak bu etiketlerle ("Çok Kolay", "Kolay", "Orta", "Zor") belirt.
+            Örnek: Eğer 30 Çok Kolay istendiyse, 30 sorunun tamamının difficulty değeri "Çok Kolay" olmalı ve sorular temel seviyede olmalıdır.
             """
 
         prompt = f"""
@@ -513,6 +532,9 @@ class GeminiQuestionService:
             parsed_list = json.loads(raw_text)
             questions: List[Question] = []
             for idx, item in enumerate(parsed_list, start=1):
+                diff_val = item.get("difficulty", "Orta")
+                if target_diff_sequence and (idx - 1) < len(target_diff_sequence):
+                    diff_val = target_diff_sequence[idx - 1]
                 q = Question(
                     id=idx,
                     question=item["question"],
@@ -520,19 +542,26 @@ class GeminiQuestionService:
                     correct=item["correct"],
                     explanation=item.get("explanation", ""),
                     duration=item.get("duration", 15),
-                    difficulty=item.get("difficulty", "Orta"),
+                    difficulty=diff_val,
                     folder_id=folder_id
                 )
                 questions.append(q)
 
             if len(questions) >= 5:
                 logger.info(f"Successfully generated {len(questions)} questions using Gemini API!")
-                return questions[:count]
+                res_questions = questions[:count]
+                if target_diff_sequence:
+                    for i, q in enumerate(res_questions):
+                        if i < len(target_diff_sequence):
+                            q.difficulty = target_diff_sequence[i]
+                return res_questions
             else:
                 logger.warning("Gemini returned fewer questions than expected. Falling back to curated bank.")
-                return self.get_default_questions(folder_id)[:count]
+                return self.get_default_questions(folder_id, target_diff_sequence)[:count]
 
         except Exception as e:
+            logger.error(f"Error calling Gemini API: {e}. Utilizing fallback questions.")
+            return self.get_default_questions(folder_id, target_diff_sequence)[:count]
             logger.error(f"Error calling Gemini API: {e}. Utilizing fallback questions.")
             return self.get_default_questions(folder_id)[:count]
 
